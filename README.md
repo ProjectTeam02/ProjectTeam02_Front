@@ -11,19 +11,37 @@ ProjectTeam02_Front/
 ├─ README.md
 └─ frontend/
    ├─ assets/
+   │  └─ characters/
+   │     ├─ leren_warrior.png              ●
+   │     ├─ leren_mage.png                 ●
+   │     └─ leren_archer.png               ●
    ├─ src/
    │  ├─ components/
    │  │  ├─ common/
+   │  │  │  ├─ LerenButton.js              ●
+   │  │  │  ├─ LerenCard.js                ●
+   │  │  │  ├─ LerenCharacter.js           ●
+   │  │  │  ├─ LerenCheck.js               ●
+   │  │  │  ├─ LerenInput.js               ●
+   │  │  │  ├─ LerenLinkCard.js            ●
+   │  │  │  └─ LerenOption.js              ●
    │  │  ├─ game/
+   │  │  │  ├─ StageCard.js                ●
+   │  │  │  └─ StagePath.js                ●
    │  │  └─ learning/
    │  ├─ constants/
+   │  │  └─ theme.js                       ●
    │  ├─ context/
    │  ├─ hooks/
    │  ├─ mocks/
    │  ├─ navigation/
    │  ├─ screens/
    │  │  ├─ auth/
+   │  │  │  ├─ LoginScreen.js             ●
+   │  │  │  ├─ SignupScreen.js            ●
+   │  │  │  └─ JobSelectionScreen.js      ●
    │  │  ├─ game/
+   │  │  │  └─ ExplorationMapScreen.js    ●
    │  │  ├─ home/
    │  │  ├─ learning/
    │  │  ├─ mypage/
@@ -32,12 +50,12 @@ ProjectTeam02_Front/
    │  └─ utils/
    ├─ .gitignore
    ├─ AGENTS.md
-   ├─ App.js
+   ├─ App.js                              ▲
    ├─ app.json
    ├─ index.js
    ├─ LICENSE
-   ├─ package.json
-   └─ package-lock.json
+   ├─ package.json                        ▲
+   └─ package-lock.json                   ▲
 ```
 
 ## 폴더별 역할
