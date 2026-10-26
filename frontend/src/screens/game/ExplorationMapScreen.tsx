@@ -1,4 +1,7 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * 탐험 지도 테스트 UI. 현재는 9개 샘플 지역과 진행 상태를 표시하며 실제 학습 데이터·화면 이동은 추가 연결이 필요합니다.
+ */
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import StageCard from '../../components/game/StageCard';
+import type { StageStatus } from '../../components/game/StageCard';
 import StagePath from '../../components/game/StagePath';
 
 const C = {
@@ -21,7 +25,20 @@ const C = {
   white: '#FFFFFF',
 };
 
-const STAGES = [
+// 기존 지도 미리보기의 번호입니다. 서버의 UUID stageId와는 별도입니다.
+interface Stage {
+  id: number;
+  title: string;
+  prerequisite: number | null;
+}
+
+interface MapPreview {
+  completed: number[];
+  stage1: string | null;
+  modal: number | null;
+}
+
+const STAGES: Stage[] = [
   { id: 1, title: '경제 기초', prerequisite: null },
   { id: 2, title: '물가와\n인플레이션', prerequisite: 1 },
   { id: 3, title: '금리와 대출', prerequisite: 2 },
@@ -36,6 +53,7 @@ const STAGES = [
 const LEFT_STAGES = [2, 3, 4, 5, 6];
 const RIGHT_STAGES = [7, 8, 9];
 
+// 개발 중 확인할 완료/진행/잠금 팝업의 샘플 조합. 서비스 데이터가 아닙니다.
 const PREVIEWS = {
   default: { completed: [], stage1: '1 / 3 완료', modal: null },
   first: { completed: [], stage1: '시작하기', modal: null },
@@ -49,9 +67,27 @@ const PREVIEWS = {
   locked7: { completed: [], stage1: '1 / 3 완료', modal: 7 },
   locked8: { completed: [], stage1: '1 / 3 완료', modal: 8 },
   locked9: { completed: [], stage1: '1 / 3 완료', modal: 9 },
-};
+} satisfies Record<string, MapPreview>;
 
-function cleanTitle(title) {
+export type MapPreviewState = keyof typeof PREVIEWS;
+export type PreviewTab = '홈' | '탐험' | '복습' | 'AI 질문' | '마이';
+
+// 외부 진행도 값이 없으면 샘플을 사용합니다. 실제 API의 UUID는 별도 매핑이 필요합니다.
+export interface ExplorationMapScreenProps {
+  previewState?: MapPreviewState;
+  completedStageIds?: number[];
+  stage1CompletedSteps?: number;
+  onBack?: () => void;
+  onOpenStage?: (stageNumber: number) => void;
+  onTabPress?: (tab: PreviewTab) => void;
+  showPreviewTabBar?: boolean;
+}
+
+const PREVIEW_TABS: [string, PreviewTab][] = [
+  ['⌂', '홈'], ['◇', '탐험'], ['✓', '복습'], ['✦', 'AI 질문'], ['○', '마이'],
+];
+
+function cleanTitle(title: string) {
   return title.replace(/\n/g, ' ');
 }
 
@@ -63,8 +99,8 @@ export default function ExplorationMapScreen({
   onOpenStage,
   onTabPress,
   showPreviewTabBar = false,
-}) {
-  const preview = PREVIEWS[previewState] || PREVIEWS.default;
+}: ExplorationMapScreenProps = {}) {
+  const preview: MapPreview = PREVIEWS[previewState] || PREVIEWS.default;
 
   // 실제 연동 시 외부에서 완료 상태를 전달받을 수 있음
   const completed = completedStageIds ?? preview.completed;
@@ -74,13 +110,17 @@ export default function ExplorationMapScreen({
       ? `${stage1CompletedSteps} / 3 완료`
       : preview.stage1;
 
-  const [lockedStage, setLockedStage] = useState(preview.modal);
+  const [lockedStage, setLockedStage] = useState<number | null>(preview.modal);
+  const [previousPreview, setPreviousPreview] = useState(previewState);
 
-  useEffect(() => {
+  // 미리보기 변경 시 팝업만 초기화하고 불필요한 Effect 렌더링을 피합니다.
+  if (previousPreview !== previewState) {
+    setPreviousPreview(previewState);
     setLockedStage(preview.modal);
-  }, [previewState]);
+  }
 
-  const getStatus = (stage) => {
+  // 샘플 선행관계로 표시 상태를 계산합니다. 서버의 접근권한 검사를 대체하지 않습니다.
+  const getStatus = (stage: Stage): StageStatus => {
     if (completed.includes(stage.id)) {
       return 'complete';
     }
@@ -89,14 +129,15 @@ export default function ExplorationMapScreen({
       return 'active';
     }
 
-    if (completed.includes(stage.prerequisite)) {
+    if (stage.prerequisite !== null && completed.includes(stage.prerequisite)) {
       return 'available';
     }
 
     return 'locked';
   };
 
-  const handleStagePress = (stage) => {
+  // 잠긴 지역은 안내 팝업, 열린 지역은 부모의 이동 콜백으로 전달합니다.
+  const handleStagePress = (stage: Stage) => {
     if (getStatus(stage) === 'locked') {
       setLockedStage(stage.id);
       return;
@@ -105,7 +146,7 @@ export default function ExplorationMapScreen({
     onOpenStage?.(stage.id);
   };
 
-  const renderStage = (id) => {
+  const renderStage = (id: number) => {
     const stage = STAGES.find((item) => item.id === id);
 
     if (!stage) return null;
@@ -153,11 +194,13 @@ export default function ExplorationMapScreen({
       ? `STAGE ${previousStage.id} · ${cleanTitle(previousStage.title)}을 완료하면 도전할 수 있어요.`
       : '';
 
+  // 아직 완료하지 않았고 선행조건을 만족하는 첫 지역을 이어하기 대상으로 선택합니다.
   const currentStage = STAGES.find(
     (stage) => !completed.includes(stage.id) &&
-      (stage.id === 1 || completed.includes(stage.prerequisite))
+      (stage.id === 1 || (stage.prerequisite !== null && completed.includes(stage.prerequisite)))
   ) || STAGES[0];
 
+  // TODO(학습 연동): 고정된 3단계 표시는 실제 학습 단계 수와 진행도로 교체합니다.
   const currentProgress =
     currentStage.id === 1
       ? previewState === 'first'
@@ -284,13 +327,7 @@ export default function ExplorationMapScreen({
       {/* 테스트용 하단 탭바 */}
       {showPreviewTabBar && (
         <View style={styles.tabBar}>
-          {[
-            ['⌂', '홈'],
-            ['◇', '탐험'],
-            ['✓', '복습'],
-            ['✦', 'AI 질문'],
-            ['○', '마이'],
-          ].map(([icon, label]) => (
+          {PREVIEW_TABS.map(([icon, label]) => (
             <Pressable
               key={label}
               style={styles.tab}
@@ -359,6 +396,7 @@ export default function ExplorationMapScreen({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

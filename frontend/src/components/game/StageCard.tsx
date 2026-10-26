@@ -1,4 +1,8 @@
+/**
+ * 탐험 지도에 표시할 지역 카드. 상태와 진행 문구를 표시하고 클릭을 전달합니다. 잠금 판정은 지도 화면에서 담당합니다.
+ */
 import React from 'react';
+import type { PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 const C = {
@@ -10,6 +14,19 @@ const C = {
   successBg: '#E8F6EF',
 };
 
+// 지도 화면이 계산해 전달하는 UI 상태이며 서버 진행도 Enum과는 별도입니다.
+export type StageStatus = 'locked' | 'complete' | 'available' | 'active';
+
+export interface StageCardProps {
+  number: number;
+  title: string;
+  status?: StageStatus;
+  progress?: string | null;
+  requirement?: string;
+  onPress?: PressableProps['onPress'];
+  style?: StyleProp<ViewStyle>;
+}
+
 export default function StageCard({
   number,
   title,
@@ -18,11 +35,12 @@ export default function StageCard({
   requirement,
   onPress,
   style,
-}) {
+}: StageCardProps) {
   const isComplete = status === 'complete';
   const isAvailable = status === 'available';
   const isActive = status === 'active';
 
+  // 잠금 사유 또는 완료/진행 문구를 하나의 카드 설명으로 정리합니다.
   let description = `잠김 · ${requirement || '이전 지역 완료 필요'}`;
 
   if (isComplete) {
@@ -69,6 +87,7 @@ export default function StageCard({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   card: {
     width: '100%',

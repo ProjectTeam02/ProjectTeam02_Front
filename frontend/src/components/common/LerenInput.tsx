@@ -1,5 +1,8 @@
-
+/**
+ * 로그인·회원가입에서 재사용하는 입력창. label, 안내/오류 문구, 입력 방식과 비활성 표시를 담당합니다.
+ */
 import React from 'react';
+import type { TextInputProps } from 'react-native';
 import {
   View,
   Text,
@@ -14,6 +17,20 @@ import {
 } from '../../constants/theme';
 
 // 로그인·회원가입 공통 입력 컴포넌트
+export interface LerenInputProps {
+  label?: string;
+  value?: string;
+  onChangeText?: TextInputProps['onChangeText'];
+  placeholder?: string;
+  hint?: string;
+  error?: string;
+  state?: 'default' | 'error';
+  secure?: boolean;
+  keyboardType?: TextInputProps['keyboardType'];
+  editable?: boolean;
+  autoComplete?: TextInputProps['autoComplete'];
+}
+
 export default function LerenInput({
   label = '이메일',
   value = '',
@@ -26,11 +43,11 @@ export default function LerenInput({
   keyboardType = 'default',
   editable = true,
   autoComplete,
-}) {
+}: LerenInputProps = {}) {
   // 오류 상태 판단
   const isError = state === 'error' || !!error;
 
-  // 오류 메시지가 있으면 안내 문구보다 우선 표시
+  // 오류 메시지가 있으면 안내 문구보다 우선 표시합니다. 값 검증은 각 화면에서 수행합니다.
   const message = error || hint;
 
   return (
@@ -83,6 +100,7 @@ export default function LerenInput({
 }
 
 // 공통 입력창 스타일
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   container: {
     width: '100%',

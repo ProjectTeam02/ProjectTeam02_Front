@@ -1,5 +1,8 @@
-
+/**
+ * 화면 이동 등을 요청하는 카드형 버튼. 목적지와 실제 이동 처리는 부모의 onPress에서 결정합니다.
+ */
 import React from 'react';
+import type { PressableProps } from 'react-native';
 import {
   Pressable,
   View,
@@ -13,12 +16,20 @@ import {
   TYPOGRAPHY,
 } from '../../constants/theme';
 
+// 화면 경로를 직접 알지 않고 클릭 이벤트만 전달하는 재사용 UI입니다.
+export interface LerenLinkCardProps {
+  title: string;
+  subtitle?: string;
+  onPress?: PressableProps['onPress'];
+  disabled?: boolean;
+}
+
 export default function LerenLinkCard({
   title,
   subtitle,
   onPress,
   disabled = false,
-}) {
+}: LerenLinkCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -47,6 +58,7 @@ export default function LerenLinkCard({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   card: {
     width: '100%',

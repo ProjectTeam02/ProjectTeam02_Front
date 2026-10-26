@@ -1,0 +1,170 @@
+# 프론트엔드 TypeScript 전환 기록 및 다음 작업
+
+작성일: 2026-10-26
+
+최신화: 같은 날 코드 분석, 설명 주석 추가 및 이번 주 로그인 목표 반영.
+
+## 이번에 한 작업
+
+`frontend/`의 기존 JavaScript 화면과 컴포넌트를 TypeScript로 전환했습니다. 기존 폴더 역할과 테스트용 UI 구성을 유지하고, `App`은 직업 선택 화면의 마법사 선택 미리보기를 계속 표시합니다. 현재 화면은 최종 서비스 UI가 아니며, 레이아웃·여백·글꼴·색상·이미지 배치를 더 다듬어야 합니다. 실제 백엔드 연결이나 전체 화면 이동 구성도 남아 있습니다.
+
+### 변경 파일
+
+| 위치 (`frontend/` 기준) | 변경 내용 |
+| --- | --- |
+| `App.js` → `App.tsx` | 앱 루트 컴포넌트 전환. 기존 직업 선택 미리보기 유지 |
+| `src/components/common/`의 7개 `.js` → `.tsx` | LerenButton, LerenCard, LerenCharacter, LerenCheck, LerenInput, LerenLinkCard, LerenOption의 props 타입 정의 |
+| `src/components/game/StageCard.js` → `.tsx` | 잠김/완료/학습 가능/진행 상태 및 이벤트·스타일 타입 정의 |
+| `src/components/game/StagePath.js` → `.tsx` | 세로/분기 경로 및 높이 타입 정의 |
+| `src/screens/auth/`의 3개 `.js` → `.tsx` | LoginScreen, SignupScreen, JobSelectionScreen의 입력·미리보기·콜백·선택 상태 타입 정의 |
+| `src/screens/game/ExplorationMapScreen.js` → `.tsx` | 지도 데이터·미리보기·팝업·탭·스테이지 콜백 타입 정의 |
+| `src/constants/theme.js` → `theme.ts` | 공통 글꼴 스타일이 React Native `TextStyle`에 맞는지 검사 |
+| `src/utils/errorDetails.ts` (신규) | `unknown` 오류에서 code/message/HTTP 상태를 안전하게 읽음 |
+| `tsconfig.json` (신규) | `expo/tsconfig.base` 기반, `strict: true`, JavaScript 앱 소스 검사 제외, 출력 없이 타입 검사 |
+| `eslint.config.js` (신규) | Expo 기본 ESLint 설정 |
+| `package.json`, `package-lock.json` | TypeScript·React 타입·ESLint 개발 의존성 및 `typecheck`/`lint` 명령 추가 |
+
+기존 앱 소스 15개를 전환했고, 타입을 가진 오류 처리 유틸리티를 하나 추가했습니다. React Native 타입은 자체 패키지에서 가져오며 별도 `@types/react-native`를 추가하지 않았습니다. Expo SDK와 React Native 버전은 유지했습니다.
+
+`index.js`는 Expo의 JavaScript 시작 파일로 유지합니다. `./App` import가 `App.tsx`를 찾습니다. 도구 설정 파일 `eslint.config.js`, 이미지, `app.json`도 TypeScript 전환 대상으로 보지 않습니다.
+
+### 타입 전환 과정에서 보완한 부분
+
+- 버튼 클릭/입력 속성은 React Native의 `PressableProps`, `TextInputProps`에서 가져옵니다. 스타일은 `StyleProp<ViewStyle>`, 이미지는 `ImageSourcePropType`을 사용합니다.
+- 카드 종류, 선택지 상태, 직업, 화면 미리보기는 허용 값의 유니온 타입으로 검사합니다.
+- 직업 미선택/팝업 닫힘은 `null`로 명시하고, 선택한 직업 객체가 있는지 확인한 후 이미지를 읽습니다.
+- 회원가입 콜백의 기존 동작을 유지합니다. `false` 또는 `{ success: false }`는 실패이며, 그 외 정상 반환(반환값 없음 포함)은 성공으로 처리합니다. 오류 코드와 `response.data.code`/HTTP 상태를 안전하게 읽어 이메일·닉네임 오류를 구분합니다.
+- 지도 미리보기 변경 시 팝업 초기화는 유지하면서, Effect에서 즉시 상태를 바꿔 추가 렌더링하던 부분을 정리했습니다.
+- 무분별한 `any`, `@ts-ignore`, `@ts-nocheck`로 검사를 우회하지 않았습니다.
+
+### 푸시 전 설명 주석 및 문서 보완
+
+- 앱 진입점·컴포넌트·화면·공통 값·오류 유틸리티·ESLint 설정에 한국어 역할 주석을 추가했습니다.
+- 파일 목적, props/콜백의 책임, 입력 검증, 상태 변경, 잠금 판정, 스타일 구역을 설명했습니다. 테스트용 데이터와 실제 API 미연결 부분을 구분했습니다.
+- App의 사용하지 않는 예제·대체 미리보기 주석 코드는 정리하고, 현재 직업 미리보기의 역할을 명확히 했습니다. 화면 동작은 유지했습니다.
+- 기존에 발견된 카카오 버튼 표시 조건, 로그인 오류 구분, 회원가입 409 분기, 직업 오류 문구는 TODO와 아래 체크리스트에 남겼습니다. 이번 주석 작업에서 수정 완료한 항목이 아닙니다.
+- `frontend/AGENTS.md`에 설명 주석 작성 규칙을 추가했습니다. 이후 개발에서도 파일 목적과 주요 흐름을 주석으로 설명합니다.
+- README의 JavaScript 파일명과 초기 폴더 설명을 현재 TypeScript 소스 및 진행 상태로 갱신했습니다.
+
+## 실행 및 검사 방법
+
+프로젝트 루트가 아닌 `frontend/`에서 실행합니다.
+
+```powershell
+cd C:\Leren\ProjectTeam02_Front\frontend
+npm ci
+npm run typecheck
+npm run lint
+npm start
+```
+
+JSX를 포함하는 새 화면/컴포넌트는 `.tsx`, 일반 함수·데이터·타입은 `.ts`로 작성합니다. 기존 파일에 import할 때 확장자를 붙일 필요는 없습니다.
+
+## 검증 결과
+
+- `npm run typecheck`: 통과.
+- `npm run lint`: 통과.
+- 오류 해석 유틸리티 스모크 검사: 일반 Error, 서버 오류, HTTP 409, 직접 코드 우선 읽기 및 null 등 예상 밖 입력의 안전한 해석 확인. 화면의 회원가입 409 분기 전체가 검증된 것은 아니며 아래 오분류 보완이 남아 있습니다.
+- `npx expo export --platform android --platform ios --output-dir dist/typescript-check --max-workers 2`: 통과. 기존 `index.js` → `App.tsx` 진입점으로 양쪽 Hermes 번들을 생성했습니다. 결과는 Git에서 제외되는 `frontend/dist/typescript-check/`에 있습니다.
+- 실제 기기/에뮬레이터 조작, 로그인·직업 저장·AI 서버 통신은 검증하지 않았습니다.
+
+## 현재 콜백 타입은 공개 API 명세가 아닙니다
+
+`SignupValues`, `SignupResult`, `SaveJobResult`, `onLogin`, `onSaveJob`는 현재 화면이 기대하는 값입니다. 백엔드가 동일한 JSON을 반환한다고 가정하지 않습니다. `src/services/`에 실제 통신 함수를 만들 때, 공개 API 응답을 검증하고 화면 콜백 형식으로 변환해야 합니다. TypeScript 타입만으로 실제 서버 JSON이 검사되는 것은 아닙니다.
+
+- 직업 ID `warrior/mage/archer`는 화면 식별자입니다. DB의 `WARRIOR/MAGE/ARCHER`와 명시적으로 매핑해야 합니다.
+- 지도 번호 1~9는 기존 미리보기 데이터입니다. 실제 서버의 UUID `stageId` 또는 학습 콘텐츠 관계와 혼동하지 않습니다.
+- 이름/콜백이 있다고 로그인·가입·직업 저장이 실제로 연결된 상태는 아닙니다. 미연결 안내와 오류 흐름을 유지합니다.
+
+## 이제부터 해야 할 일
+
+### 1. 전환 범위 공유 및 리뷰
+
+- `.js` 파일이 `.tsx`/`.ts`로 바뀌었으므로 다른 브랜치 작업과 합칠 때 같은 이름의 JavaScript 파일을 다시 만들지 않습니다.
+- 파일 이름 변경을 포함해 커밋하고, 프론트 저장소에 TypeScript 전환 PR을 올려 리뷰합니다. 이번 작업에서 커밋·push·PR 생성은 하지 않았습니다.
+- 리뷰 전에 `npm ci`, 타입 검사, 코드 검사 및 실제 화면 실행을 확인합니다.
+
+### 2. 이번 주 P0: 백엔드와 협력한 로그인 UI 및 연동
+
+| 구분 | 해야 할 일 | 완료 기준 |
+| --- | --- | --- |
+| 공동 협의 | 이메일/카카오 범위, 로그인 DTO·오류·JWT·성공 후 이동 확정 | 명세·서버·테스트 계정이 공유됨 |
+| UI 보완 | 테스트 화면의 레이아웃·여백·글꼴·버튼·상태 안내 정리 | 디자인 기준과 실제 기기에서 확인 |
+| 화면 이동 | 로그인 시작 경로, 가입/직업/홈 등 합의된 이동 구성 | 화면에 접근하고 성공 후 올바르게 이동 |
+| 실제 통신 | services 함수·응답 검증·오류 변환·인증 상태 연결 | 테스트 계정으로 로그인 성공/실패 처리 |
+| 검증 | 반복 클릭, 응답 지연, 장애, 키보드/스크롤 확인 | 기기 테스트 기록 및 검사 통과 후 PR |
+
+- [ ] `POST /api/v1/auth/login`의 방식별 요청/응답과 HTTP 상태·오류 코드 확정
+- [ ] JWT 전달·보관·만료·갱신 및 로그인 유지 정책 확정
+- [ ] 신규/기존 사용자와 직업 선택 여부에 따른 이동 기준 확정
+- [ ] 실제 UI 다듬기와 샘플 상태 확인 (API 협의와 병행 가능)
+- [ ] 아래 코드 보완점을 반영하고 실제 로그인 통신 연결
+- [ ] 기기·에뮬레이터에서 성공/실패/장애/반복 클릭/이동 검증
+
+현재 `onLogin` 등은 화면이 전달받는 콜백이며 services에 통신 코드는 없습니다. 파일이 존재한다는 이유로 로그인 연동 완료로 간주하지 않습니다.
+
+### 3. 이미 확인된 코드 보완점 (미완료)
+
+- [ ] 카카오 로그인 버튼이 이메일/비밀번호 입력 완료(FILLED)에 종속되는 표시 조건 조정 여부 결정
+- [ ] 모든 로그인 실패를 계정 오류로 안내하는 흐름을 네트워크/서버 장애와 구분
+- [ ] 회원가입에서 닉네임 중복 코드+HTTP 409가 이메일 오류로 분류되지 않도록 구체 코드 우선 처리
+- [ ] 직업 저장 실패의 '마법사' 고정 문구를 선택값 또는 공통 문구로 수정
+- [ ] 지도 번호 1~9/선행관계/3단계 진행 표시를 실제 학습 데이터로 교체
+
+이는 기존 동작을 분석해 확인한 항목입니다. TypeScript 검사 통과와 별도로 UI·연동 작업에서 해결해야 합니다.
+
+### 4. 실제 화면 이동 연결
+
+- 현재 `App.tsx`는 직업 선택 화면 하나를 보여주는 미리보기입니다.
+- 기존 `frontend/AGENTS.md` 지침에 따라 Expo Router와 `src/app/` 경로 구조를 별도 작업으로 구성합니다.
+- 로그인 → 회원가입 → 직업 선택 → 홈/탐험 연결 및 뒤로가기/로그인 보호를 구현합니다. 기존 `src/screens/` 화면은 재사용합니다.
+
+현재 services/context/hooks/mocks/navigation 및 home/learning/mypage/tutor는 `.gitkeep`만 있는 상태입니다. `navigation/` 폴더의 존재는 화면 이동 구현을 의미하지 않습니다.
+
+### 5. 공개 API DTO 확정 및 services 구현
+
+아래 경로는 백엔드팀 공유 목록이며, 최종 요청/응답 JSON과 배포 상태는 추가 확인이 필요합니다.
+
+| 기능 | 공개 API |
+| --- | --- |
+| 로그인/로그아웃 | POST `/api/v1/auth/login`, POST `/api/v1/auth/logout` |
+| 내 정보 | GET `/api/v1/users/me` |
+| AI 대화 생성/목록 | POST/GET `/api/v1/tutor/conversations` |
+| AI 이력 | GET `/api/v1/tutor/conversations/{conversationId}/messages` |
+| AI 질문 | POST `/api/v1/tutor/messages` |
+| AI 사용량 | GET `/api/v1/tutor/usage` |
+| 문제 생성/조회 | GET `/api/v1/quizzes/generate` |
+| 답안 제출 | POST `/api/v1/quizzes/{id}/submit` |
+| 알림 설정 | PATCH `/api/v1/users/me/notifications` |
+
+프론트 → Node.js 공개 API → FastAPI AI 서버 구조입니다. AI의 `/internal/v1/tutor/answer`를 직접 호출하지 않습니다. 서버 내부 토큰과 OpenRouter 키는 프론트에 넣지 않습니다. 기존 AI `/api/tutor/chat`는 운영 연결 경로가 아닙니다.
+
+회원가입·약관 동의·직업 저장 경로, JWT 갱신·저장 방식, 공통 성공/실패 응답도 확인해야 합니다. API 경로만 보고 임의 DTO를 만들지 않습니다.
+
+### 6. 백엔드·AI팀 공동 협의 (AI Tutor 연동 시)
+
+- Timeout: 공유된 백엔드 5초 정책과 AI 기존 30~45초 설정을 조정합니다. 늦은 답변, PENDING 해제, 사용량 RESERVED 복구, 재시도 중복 정책을 결정합니다.
+- 질문 전송이 최종 답변까지 기다리는지, 접수 후 별도 조회하는지 확정합니다.
+- clientMessageId(프론트 메시지) / requestId(AI 호출) / 서버 idempotency_key를 구분하고 생성·재사용 규칙을 정합니다.
+- 출처 제목·상세 링크와 GROUNDED/INSUFFICIENT 공개 응답을 확정합니다.
+- DB 문서 버전 integer와 AI DTO의 문자열/null 차이를 맞춥니다.
+- 중복 퀴즈 제출의 409 정책과 같은 submissionId에 기존 결과를 반환하는 DB 규칙을 조정합니다.
+- FREE/PREMIUM 요금제와 BASIC/ADVANCED 모델 등급을 구분합니다. AI 문서 기준 등급별 모델 라우팅은 아직 후속 작업입니다.
+
+### 7. 후속 기능과 통합 테스트
+
+로그인 이후에는 회원가입·약관·직업 저장 → 홈/학습/탐험 → AI Tutor → 퀴즈·보상·복습·설정 순으로 이슈를 나눕니다. 팀 우선순위에 따라 조정하며 모든 기능을 이번 주 로그인 이슈에 포함하지 않습니다.
+
+로그인/가입/직업 저장, 대화 생성/후속 질문/이력 복원, 출처·근거 부족, 잔여 횟수·429, 503/Timeout 복구, 중복 클릭·재시도, 퀴즈 채점·보상 중복, 실제 기기 화면과 키보드 동작을 확인합니다.
+
+## 주석 작성 기준
+
+새 코드와 수정 코드에는 한국어 설명 주석을 기본으로 작성합니다. 파일 목적, 주요 함수·컴포넌트의 책임, 상태·이벤트·API 연결 흐름을 설명하고 자명한 문법을 매 줄 반복하지 않습니다. 코드와 주석을 함께 갱신하며 테스트/미연결/TODO를 구현 완료와 구분합니다. JSON처럼 주석을 허용하지 않는 파일은 README에서 설명합니다.
+
+## 참고
+
+- Expo TypeScript: https://docs.expo.dev/guides/typescript/
+- React Native 0.86 TypeScript: https://reactnative.dev/docs/0.86/typescript
+- AI 내부 계약: https://github.com/ProjectTeam02/ProjectTeam02_AI/blob/d5e27a9bba3de418e31ad8d41bfb644f54cc0513/docs/TUTOR_INTERNAL_API_CONTRACT.md
+- AI/백엔드 역할: https://github.com/ProjectTeam02/ProjectTeam02_AI/blob/d5e27a9bba3de418e31ad8d41bfb644f54cc0513/docs/AI_BACKEND_ERD_MAPPING.md
+- 당시 후속 작업: https://github.com/ProjectTeam02/ProjectTeam02_AI/blob/8148c1bfa23e7d316c6edd93ec7580b535c810ab/docs/REMAINING_WORK.md

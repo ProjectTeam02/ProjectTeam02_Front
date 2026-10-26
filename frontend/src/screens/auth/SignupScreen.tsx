@@ -1,4 +1,6 @@
-
+/**
+ * 회원가입 테스트 UI. 입력 검증, 요청 중/성공/실패 표시를 담당하며 API 호출과 화면 이동은 외부에서 연결합니다.
+ */
 import React, { useState } from 'react';
 import {
   View,
@@ -22,6 +24,7 @@ import {
 import LerenInput from '../../components/common/LerenInput';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
+import { getErrorDetails } from '../../utils/errorDetails';
 
 // 회원가입 화면 상태
 const STATES = {
@@ -30,7 +33,32 @@ const STATES = {
   ERROR: 'error',
   PENDING: 'pending',
   SUCCESS: 'success',
-};
+} as const;
+
+export type SignupPreviewState = (typeof STATES)[keyof typeof STATES];
+
+export interface SignupValues {
+  email: string;
+  password: string;
+  nickname: string;
+}
+
+// 화면이 기존에 지원하던 반환값입니다. 최종 회원가입 API DTO는 별도 확정합니다.
+export interface SignupResult {
+  success?: boolean;
+  message?: string;
+  code?: string;
+}
+
+type SignupOutcome = SignupResult | false | void;
+
+export interface SignupScreenProps {
+  onSignup?: (values: SignupValues) => SignupOutcome | Promise<SignupOutcome>;
+  onBack?: () => void;
+  onLogin?: () => void;
+  onChooseJob?: () => void;
+  previewState?: SignupPreviewState;
+}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -40,14 +68,14 @@ export default function SignupScreen({
   onLogin,
   onChooseJob,
   previewState,
-}) {
+}: SignupScreenProps = {}) {
   // 개발 중 Figma 화면 상태 테스트
   const isPreview =
     typeof __DEV__ !== 'undefined' &&
     __DEV__ &&
     !!previewState;
 
-  const initialState = isPreview
+  const initialState: SignupPreviewState = isPreview && previewState
     ? previewState
     : STATES.EMPTY;
 
@@ -76,7 +104,7 @@ export default function SignupScreen({
   );
 
   // 화면 및 요청 상태
-  const [status, setStatus] = useState(initialState);
+  const [status, setStatus] = useState<SignupPreviewState>(initialState);
   const [submitting, setSubmitting] = useState(false);
 
   // 오류 상태
@@ -97,6 +125,7 @@ export default function SignupScreen({
       ? '이메일 형식을 확인해 주세요'
       : '';
 
+  // 현재는 비밀번호 일치 여부만 확인합니다. 길이·문자 조합·약관은 최종 가입 정책에 맞춥니다.
   const passwordMismatch =
     confirmPassword.length > 0 &&
     password !== confirmPassword;
@@ -126,23 +155,23 @@ export default function SignupScreen({
     }
   };
 
-  const handleEmailChange = (value) => {
+  const handleEmailChange = (value: string) => {
     setEmail(value);
     setEmailError('');
     clearSubmitError();
   };
 
-  const handlePasswordChange = (value) => {
+  const handlePasswordChange = (value: string) => {
     setPassword(value);
     clearSubmitError();
   };
 
-  const handleConfirmPasswordChange = (value) => {
+  const handleConfirmPasswordChange = (value: string) => {
     setConfirmPassword(value);
     clearSubmitError();
   };
 
-  const handleNicknameChange = (value) => {
+  const handleNicknameChange = (value: string) => {
     setNickname(value);
     setNicknameError('');
     clearSubmitError();
@@ -170,14 +199,14 @@ export default function SignupScreen({
         nickname: nickname.trim(),
       });
 
-      // A resolved request is successful unless it explicitly reports failure.
+      // 기존 화면 계약: 명시적 실패(false/success:false)가 아니면 정상 완료로 처리합니다.
+      // 실제 연동 계층에서 공개 API 응답을 이 계약에 맞춰 변환해야 합니다.
       if (result === false || result?.success === false) {
-        const error = new Error(
-          result?.message || '계정을 만들지 못했어요.'
+        const detail = typeof result === 'object' ? result : undefined;
+        throw Object.assign(
+          new Error(detail?.message || '계정을 만들지 못했어요.'),
+          { code: detail?.code }
         );
-
-        error.code = result?.code;
-        throw error;
       }
 
       setStatus(STATES.SUCCESS);
@@ -185,12 +214,9 @@ export default function SignupScreen({
     } catch (error) {
       setStatus(STATES.ERROR);
 
-      const errorCode =
-        error?.code ||
-        error?.response?.data?.code;
+      const { code: errorCode, httpStatus, message } = getErrorDetails(error);
 
-      const httpStatus = error?.response?.status;
-
+      // TODO(가입 연동): 409보다 구체 오류 코드를 우선해 닉네임 중복의 오분류를 막습니다.
       if (
         errorCode === 'EMAIL_ALREADY_EXISTS' ||
         errorCode === 'DUPLICATE_EMAIL' ||
@@ -201,7 +227,7 @@ export default function SignupScreen({
         setNicknameError('이미 사용 중인 닉네임이에요');
       } else {
         setSubmitError(
-          error?.message ||
+          message ||
           '회원가입에 실패했어요. 다시 시도해 주세요.'
         );
       }
@@ -239,7 +265,7 @@ export default function SignupScreen({
   };
 
   // 공통 헤더
-  const renderHeader = (title) => (
+  const renderHeader = (title: string) => (
     <View style={styles.header}>
       <Pressable
         onPress={handleBack}
@@ -441,6 +467,7 @@ export default function SignupScreen({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

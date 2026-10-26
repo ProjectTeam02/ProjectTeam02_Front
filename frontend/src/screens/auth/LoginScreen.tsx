@@ -1,4 +1,6 @@
-
+/**
+ * 로그인 테스트 UI와 입력·요청 상태 처리. 실제 인증 및 성공 후 이동은 외부 콜백으로 연결해야 합니다.
+ */
 import React, { useState } from 'react';
 import {
   View,
@@ -22,6 +24,7 @@ import {
   import LerenInput from '../../components/common/LerenInput';
   import LerenButton from '../../components/common/LerenButton';
   import LerenCard from '../../components/common/LerenCard';
+  import type { CardVariant } from '../../components/common/LerenCard';
   import LerenLinkCard from '../../components/common/LerenLinkCard';
   
 
@@ -32,7 +35,20 @@ const STATES = {
   ERROR: 'error',
   RETURNING: 'returning',
   KAKAO_ERROR: 'kakaoError',
-};
+} as const;
+
+export type LoginPreviewState = (typeof STATES)[keyof typeof STATES];
+
+// 현재는 화면 콜백 계약입니다. 공개 로그인 API의 최종 요청/응답 DTO는 별도 확정합니다.
+export interface LoginScreenProps {
+  onLogin?: (email: string, password: string) => unknown;
+  onKakaoLogin?: () => unknown;
+  onSignup?: () => void;
+  onResetPassword?: () => void;
+  onBack?: () => void;
+  returningUserName?: string;
+  previewState?: LoginPreviewState;
+}
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -44,17 +60,15 @@ export default function LoginScreen({
   onBack,
   returningUserName,
   previewState,
-}) {
+}: LoginScreenProps = {}) {
   // 개발 중 화면 상태 미리보기
   const isPreview = __DEV__ && !!previewState;
 
   const hasPreviewInputs =
     isPreview &&
-    [
-      STATES.FILLED,
-      STATES.ERROR,
-      STATES.RETURNING,
-    ].includes(previewState);
+    (previewState === STATES.FILLED ||
+      previewState === STATES.ERROR ||
+      previewState === STATES.RETURNING);
 
   // 이메일, 비밀번호 입력값 관리
   const [email, setEmail] = useState(
@@ -66,8 +80,8 @@ export default function LoginScreen({
   );
   
   // 로그인 상태 및 요청 중 여부 관리
-  const [status, setStatus] = useState(
-    isPreview
+  const [status, setStatus] = useState<LoginPreviewState>(
+    isPreview && previewState
       ? previewState
       : returningUserName
       ? STATES.RETURNING
@@ -83,6 +97,7 @@ export default function LoginScreen({
       : '';
 
   // 로그인 버튼 활성화 조건
+  // 비밀번호 정책 전체가 아닌, 로그인 요청에 필요한 최소 입력 여부만 판단합니다.
   const hasInputs =
     emailValid &&
     password.length > 0;
@@ -100,12 +115,12 @@ export default function LoginScreen({
       : status;
   
   // 입력값 변경 시 기존 오류 상태 초기화
-  const changeEmail = (value) => {
+  const changeEmail = (value: string) => {
     setEmail(value);
     if (isError) setStatus(STATES.EMPTY);
   };
 
-  const changePassword = (value) => {
+  const changePassword = (value: string) => {
     setPassword(value);
     if (isError) setStatus(STATES.EMPTY);
   };
@@ -124,8 +139,10 @@ export default function LoginScreen({
 
     try {
       setLoading(true);
+      // 부모에서 통신·인증 정보 반영·성공 이동을 처리합니다. 실패 시 예외를 전달해야 합니다.
       await onLogin(email.trim(), password);
-    } catch (error) {
+    } catch {
+      // TODO(로그인 연동): 계정 불일치와 네트워크/서버 장애를 구분해 안내합니다.
       setStatus(STATES.ERROR);
     } finally {
       setLoading(false);
@@ -147,7 +164,7 @@ export default function LoginScreen({
     try {
       setLoading(true);
       await onKakaoLogin();
-    } catch (error) {
+    } catch {
       setStatus(STATES.KAKAO_ERROR);
     } finally {
       setLoading(false);
@@ -181,7 +198,7 @@ export default function LoginScreen({
   let heroTitle = '다시 만나서 반가워요';
   let heroDescription =
     '로그인하고 경제 모험을 이어가세요.';
-  let heroVariant = 'info';
+  let heroVariant: CardVariant = 'info';
 
   if (displayStatus === STATES.FILLED) {
     heroTitle = '경제를 배우는 작은 모험';
@@ -310,7 +327,7 @@ export default function LoginScreen({
                 />
               </>
             )}
-            {/* 카카오 로그인 */}
+            {/* TODO(로그인 UI): 카카오 버튼이 이메일 입력 완료에 종속되지 않도록 표시 기준 협의 */}
             {(displayStatus === STATES.FILLED ||
               isKakaoError) && (
               <LerenButton
@@ -359,6 +376,7 @@ export default function LoginScreen({
 }
 
 // 로그인 화면 공통 스타일
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

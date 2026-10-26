@@ -1,5 +1,8 @@
-
+/**
+ * 초기 직업 선택 테스트 UI. 선택값·미리보기·저장 실패/재시도를 관리하며 실제 저장은 onSaveJob으로 전달받습니다.
+ */
 import React, { useState } from 'react';
+import type { ImageSourcePropType } from 'react-native';
 import {
   View,
   Text,
@@ -14,7 +17,30 @@ import { COLORS } from '../../constants/theme';
 import LerenButton from '../../components/common/LerenButton';
 
 // 직업 데이터 및 캐릭터 이미지
-const JOBS = [
+// 화면 내부의 식별자입니다. 서버 classCode와의 매핑은 연동 시 정의합니다.
+export type JobId = 'warrior' | 'mage' | 'archer';
+export type JobPreviewState = 'empty' | 'error' | JobId;
+
+interface Job {
+  id: JobId;
+  name: string;
+  description: string;
+  image: ImageSourcePropType;
+}
+
+// 기존 화면 콜백 계약이며 서버 응답 DTO가 아닙니다.
+export interface SaveJobResult {
+  success: boolean;
+}
+
+export interface JobSelectionScreenProps {
+  previewState?: JobPreviewState;
+  onBack?: () => void;
+  onSaveJob?: (job: JobId) => SaveJobResult | Promise<SaveJobResult>;
+  onComplete?: (job: JobId) => void;
+}
+
+const JOBS: Job[] = [
   {
     id: 'warrior',
     name: '검사',
@@ -36,7 +62,7 @@ const JOBS = [
 ];
 
 // Figma 상태별 초기 선택
-function getInitialJob(previewState) {
+function getInitialJob(previewState: JobPreviewState): JobId | null {
   if (previewState === 'warrior') return 'warrior';
   if (previewState === 'mage') return 'mage';
   if (previewState === 'archer') return 'archer';
@@ -49,8 +75,8 @@ export default function JobSelectionScreen({
   onBack,
   onSaveJob,
   onComplete,
-}) {
-  const [selectedJob, setSelectedJob] = useState(
+}: JobSelectionScreenProps = {}) {
+  const [selectedJob, setSelectedJob] = useState<JobId | null>(
     () => getInitialJob(previewState)
   );
   const [saving, setSaving] = useState(false);
@@ -63,13 +89,13 @@ export default function JobSelectionScreen({
   );
 
   // 직업 선택
-  const handleSelect = (jobId) => {
+  const handleSelect = (jobId: JobId) => {
     if (saving) return;
     setSelectedJob(jobId);
     setSaveError(false);
   };
 
-  // 직업 저장: API 연결은 지환님이 진행
+  // 직업 저장 요청. 화면의 소문자 JobId를 서버 classCode로 변환하는 통신 함수를 외부에서 연결합니다.
   const handleSave = async () => {
     if (!selectedJob || saving) return;
 
@@ -83,6 +109,7 @@ export default function JobSelectionScreen({
 
       const result = await onSaveJob(selectedJob);
 
+      // 실제 저장이 확인된 경우에만 다음 화면 처리를 요청합니다.
       if (result?.success !== true) {
         throw new Error('직업 저장 실패');
       }
@@ -90,7 +117,7 @@ export default function JobSelectionScreen({
       if (typeof onComplete === 'function') {
         onComplete(selectedJob);
       }
-    } catch (error) {
+    } catch {
       // 실패 시 선택 상태 유지
       setSaveError(true);
     } finally {
@@ -173,7 +200,7 @@ export default function JobSelectionScreen({
           </View>
 
           {/* 12-02: 마법사 선택 미리보기 */}
-          {!saveError && selectedJob === 'mage' && (
+          {!saveError && selected && selectedJob === 'mage' && (
             <View style={styles.magePreview}>
               <Image
                 source={selected.image}
@@ -206,7 +233,7 @@ export default function JobSelectionScreen({
               </View>
             )}
 
-          {/* 12-05: 저장 실패 */}
+          {/* 12-05: 저장 실패. TODO(UI): 아래 고정된 마법사 문구를 선택 직업에 맞춰 변경 */}
           {saveError && (
             <View style={styles.errorCard}>
               <Text style={styles.errorTitle}>
@@ -259,6 +286,7 @@ export default function JobSelectionScreen({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,

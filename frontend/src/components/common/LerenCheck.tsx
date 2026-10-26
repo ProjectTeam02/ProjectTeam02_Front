@@ -1,4 +1,6 @@
-
+/**
+ * 복습 체크 UI. 선택값은 부모가 관리하고, 이 컴포넌트는 변경할 값을 onChange로 알립니다. 실제 복습 저장은 하지 않습니다.
+ */
 import React from 'react';
 import {
   Pressable,
@@ -13,13 +15,23 @@ import {
   TYPOGRAPHY,
 } from '../../constants/theme';
 
+// checked가 실제 표시 기준이며, onChange는 다음 선택값을 부모에 전달합니다.
+export interface LerenCheckProps {
+  checked?: boolean;
+  onChange?: (checked: boolean) => void;
+  title?: string;
+  description?: string;
+  disabled?: boolean;
+}
+
 export default function LerenCheck({
   checked = false,
   onChange,
   title = '헷갈리는 문항 체크',
   description,
   disabled = false,
-}) {
+}: LerenCheckProps = {}) {
+  // 호출한 화면의 설명이 없으면 체크 상태에 맞는 기본 문구를 사용합니다.
   const subtitle = description || (
     checked
       ? '복습에 저장했어요'
@@ -62,6 +74,7 @@ export default function LerenCheck({
   );
 }
 
+// 이 화면/컴포넌트의 배치·색상·크기 정의. 최종 UI는 디자인 기준과 기기에서 확인합니다.
 const styles = StyleSheet.create({
   container: {
     width: '100%',

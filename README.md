@@ -1,136 +1,122 @@
 # LEREN Frontend
 
-LEREN의 프론트엔드 개발 저장소입니다. JavaScript와 Expo, React Native를 사용하며, 모바일 학습 화면과 퀴즈 전투, 복습, AI 튜터 등의 기능을 구현하기 위한 기본 폴더 구조를 구성했습니다.
+Expo + React Native + TypeScript 기반 LEREN 모바일 프론트엔드 저장소입니다.
 
-현재 `test` 브랜치에는 Expo 초기 프로젝트와 폴더 구조가 준비되어 있습니다. `App.js`는 기본 예제 화면이며, `src`의 각 폴더에는 구조 유지를 위한 `.gitkeep`만 있습니다. 아래의 기능 설명은 앞으로 구현할 코드의 배치 기준입니다.
+**현재는 개발 기반과 테스트용 화면을 준비한 단계입니다. 실제 서비스 UI 다듬기, 화면 이동, 사용자 인증과 서버 API 연결은 추가 작업이 필요합니다.**
+
+상태 기준일: 2026-10-26. 자세한 전환 내역과 작업 체크리스트는 [TypeScript 전환 기록](TYPESCRIPT_MIGRATION.md)을 참고하세요.
+
+## 현재 구현된 범위
+
+| 영역 | 준비된 것 | 아직 필요한 것 |
+| --- | --- | --- |
+| 개발 환경 | 기존 앱 소스 15개 TypeScript 전환, strict 타입 검사, ESLint | 새 코드에도 타입·주석 적용 |
+| 공통 UI | 버튼·입력창·카드·링크 카드·선택지·체크·캐릭터 7개 | 최종 디자인과 기기별 화면 확인 |
+| 로그인 | 입력 검사, 요청 중/실패/재방문/카카오 실패 표시, 콜백 호출 | UI 보완, 실제 인증, 실패 원인 구분, 성공 후 이동 |
+| 회원가입 | 입력/비밀번호 확인, 요청 중/성공/중복 오류 표시 | API·약관·비밀번호 정책·화면 이동 |
+| 직업 선택 | 3종 캐릭터, 선택/미리보기/저장 중/실패/재시도 | 저장 API, 서버 코드 매핑, 완료 후 이동 |
+| 탐험 지도 | 샘플 9개 지역, 선행관계 잠금, 팝업, 진행 표시 | 실제 학습 콘텐츠·진행도·이동 연결 |
+
+`App.tsx`는 현재 **마법사가 선택된 직업 선택 미리보기**만 표시합니다. 로그인 화면 파일은 있지만 앱의 첫 화면으로 연결되어 있지 않습니다. 저장·이동 콜백도 아직 전달하지 않습니다.
+
+화면의 간격·글꼴·색상·이미지 배치 등은 테스트 UI 기준입니다. TypeScript 검사와 번들 생성 성공은 최종 디자인 또는 실제 서비스 동작 검증 완료를 의미하지 않습니다.
 
 ## 프로젝트 구조
 
 ```text
 ProjectTeam02_Front/
 ├─ README.md
+├─ TYPESCRIPT_MIGRATION.md
 └─ frontend/
-   ├─ assets/
-   │  └─ characters/
-   │     ├─ leren_warrior.png              ●
-   │     ├─ leren_mage.png                 ●
-   │     └─ leren_archer.png               ●
-   ├─ src/
-   │  ├─ components/
-   │  │  ├─ common/
-   │  │  │  ├─ LerenButton.js              ●
-   │  │  │  ├─ LerenCard.js                ●
-   │  │  │  ├─ LerenCharacter.js           ●
-   │  │  │  ├─ LerenCheck.js               ●
-   │  │  │  ├─ LerenInput.js               ●
-   │  │  │  ├─ LerenLinkCard.js            ●
-   │  │  │  └─ LerenOption.js              ●
-   │  │  ├─ game/
-   │  │  │  ├─ StageCard.js                ●
-   │  │  │  └─ StagePath.js                ●
-   │  │  └─ learning/
-   │  ├─ constants/
-   │  │  └─ theme.js                       ●
-   │  ├─ context/
-   │  ├─ hooks/
-   │  ├─ mocks/
-   │  ├─ navigation/
-   │  ├─ screens/
-   │  │  ├─ auth/
-   │  │  │  ├─ LoginScreen.js             ●
-   │  │  │  ├─ SignupScreen.js            ●
-   │  │  │  └─ JobSelectionScreen.js      ●
-   │  │  ├─ game/
-   │  │  │  └─ ExplorationMapScreen.js    ●
-   │  │  ├─ home/
-   │  │  ├─ learning/
-   │  │  ├─ mypage/
-   │  │  └─ tutor/
-   │  ├─ services/
-   │  └─ utils/
-   ├─ .gitignore
-   ├─ AGENTS.md
-   ├─ App.js                              ▲
+   ├─ App.tsx                  # 현재 테스트 화면 진입점
+   ├─ index.js                 # Expo 등록용 JavaScript 시작 파일
+   ├─ package.json
+   ├─ package-lock.json
+   ├─ tsconfig.json
+   ├─ eslint.config.js
    ├─ app.json
-   ├─ index.js
-   ├─ LICENSE
-   ├─ package.json                        ▲
-   └─ package-lock.json                   ▲
+   ├─ AGENTS.md                # 개발·한국어 설명 주석 규칙
+   ├─ assets/characters/       # 검사·마법사·궁수 이미지
+   └─ src/
+      ├─ components/
+      │  ├─ common/            # 공통 UI 7개(.tsx)
+      │  ├─ game/              # StageCard.tsx, StagePath.tsx
+      │  └─ learning/          # 아직 빈 폴더
+      ├─ constants/theme.ts    # 공통 색상·간격·글꼴
+      ├─ screens/
+      │  ├─ auth/              # LoginScreen, SignupScreen, JobSelectionScreen(.tsx)
+      │  ├─ game/              # ExplorationMapScreen.tsx
+      │  ├─ home/              # 아래 4개는 아직 빈 폴더
+      │  ├─ learning/
+      │  ├─ mypage/
+      │  └─ tutor/
+      ├─ utils/errorDetails.ts # 오류 정보의 안전한 읽기
+      ├─ services/             # 실제 통신 코드 없음
+      ├─ context/              # 인증 등 공유 상태 코드 없음
+      ├─ hooks/                # 아직 빈 폴더
+      ├─ mocks/                # 아직 빈 폴더
+      └─ navigation/           # 아직 빈 폴더
 ```
 
-## 폴더별 역할
+빈 폴더는 `.gitkeep`으로 유지합니다. 지도 샘플 값과 미리보기 데이터는 현재 각 화면 파일 안에 있습니다. 앞으로 추가할 Expo Router의 실제 경로 파일은 `src/app/`에 두고, 화면 UI는 `src/screens/`를 재사용합니다. 현재 Router는 설치·구성되지 않았습니다.
 
-아래 경로는 `frontend/`를 기준으로 합니다.
+## 설치·실행·검사
 
-| 경로 | 역할 및 예시 |
-| --- | --- |
-| `assets/` | 앱 아이콘, 캐릭터, 배경 이미지, 폰트 등 정적 리소스를 보관합니다. 현재는 Expo 기본 이미지가 있습니다. |
-| `src/components/` | 화면에서 사용하는 재사용 가능한 UI 요소를 보관합니다. |
-| `src/components/common/` | 여러 기능에서 공통으로 사용하는 버튼, 입력창, 카드, 팝업, 로딩 표시 등을 작성합니다. |
-| `src/components/game/` | 캐릭터 표시, 몬스터 HP, 퀴즈 선택지, 보상 표시 등 게임 관련 UI를 작성합니다. |
-| `src/components/learning/` | 개념 설명 카드, 학습 진행 표시, 복습 문항 카드 등 학습 관련 UI를 작성합니다. |
-| `src/constants/` | 색상, 글꼴 크기, 공통 간격, 직업 종류 등 여러 곳에서 사용하는 고정값을 관리합니다. |
-| `src/context/` | 로그인 사용자, 선택한 직업 등 여러 화면이 함께 사용하는 상태를 React Context로 제공하는 코드를 작성합니다. |
-| `src/hooks/` | 사용자 정보 조회, 학습 진행도 처리 등 컴포넌트에서 반복되는 로직을 커스텀 훅으로 분리합니다. |
-| `src/mocks/` | 서버 연결 전에 화면을 개발할 때 사용하는 예시 사용자, 학습 자료, 문제, 응답 데이터를 보관합니다. 실제 개인정보나 비밀키는 넣지 않습니다. |
-| `src/navigation/` | 화면 이동 관련 공통 설정과 보조 로직을 관리합니다. 실제 라우팅을 구현할 때는 `AGENTS.md`의 개발 지침을 확인합니다. |
-| `src/screens/` | 기능별 화면 UI를 작성합니다. 화면 전체 구성은 이곳에서 담당하고, 재사용할 부분은 `components`로 분리합니다. |
-| `src/screens/auth/` | 로그인, 회원가입, 초기 직업 선택, 비밀번호 재설정 등 계정 관련 화면을 작성합니다. |
-| `src/screens/game/` | 경제 탐험 지도, 스테이지 선택, 퀴즈 전투, 결과 및 보상 화면을 작성합니다. |
-| `src/screens/home/` | 홈 대시보드, 오늘의 학습, 이어서 학습하기 등 앱의 시작 화면을 작성합니다. |
-| `src/screens/learning/` | 개념 학습, 마이크로러닝, 복습·오답, 학습 달력 등 학습 관련 화면을 작성합니다. |
-| `src/screens/mypage/` | 사용자 프로필, 학습 통계, 직업·보유 코스튬, 코스튬 상점, 설정 등 사용자 관리 화면을 작성합니다. |
-| `src/screens/tutor/` | AI 튜터 대화, 답변 생성 중 표시, 대화 오류 등 AI 학습 보조 화면을 작성합니다. |
-| `src/services/` | 로그인, 학습 자료 조회, 답안 제출, AI 질문 등 서버 API와 통신하는 코드를 작성합니다. |
-| `src/utils/` | 날짜·숫자 표시, 입력값 검증 등 화면과 독립적으로 사용할 수 있는 공통 함수를 작성합니다. |
+Node.js와 npm, Git이 있는 환경에서 실행합니다. 아래 명령은 저장소를 내려받은 이후 기준입니다.
 
-Figma의 선택 전·선택 후·정답·오답·빈 기록·오류 등은 화면의 상태 예시입니다. 상태마다 별도 화면 파일을 만들기보다, 같은 화면에서 데이터와 상태에 따라 표시하도록 구성합니다.
-
-## 주요 파일
-
-| 파일 | 역할 |
-| --- | --- |
-| `App.js` | 현재 앱의 최상위 컴포넌트입니다. 초기 예제 화면이 들어 있으며, 앞으로 앱의 전체 구성을 연결합니다. |
-| `index.js` | `App.js`를 Expo 앱으로 등록하는 진입 파일입니다. |
-| `app.json` | 앱 이름, 아이콘, 화면 방향, 플랫폼별 설정 등을 관리합니다. |
-| `package.json` | 프로젝트 정보, 필요한 패키지, 실행 명령을 관리합니다. |
-| `package-lock.json` | 패키지의 정확한 버전을 기록해 팀원이 같은 의존성을 설치할 수 있도록 합니다. |
-| `.gitignore` | 개발 캐시, 설치된 패키지, 환경변수 등 Git에 올리지 않을 파일을 지정합니다. |
-| `AGENTS.md` | 코딩 에이전트가 참고할 Expo·React Native 개발 지침입니다. |
-| `LICENSE` | 프로젝트의 라이선스 내용을 담고 있습니다. |
-| `.gitkeep` | 빈 폴더를 Git에 포함하기 위한 빈 파일입니다. 실행 코드가 아니며, 실제 코드가 추가되면 제거할 수 있습니다. |
-
-## 설치 및 실행
-
-Node.js와 npm, Git이 설치된 환경에서 진행합니다.
-
-처음 저장소를 내려받는 경우:
-
-```bash
-git clone --branch test https://github.com/ProjectTeam02/ProjectTeam02_Front.git
-cd ProjectTeam02_Front/frontend
+```powershell
+cd C:\Leren\ProjectTeam02_Front\frontend
 npm ci
+npm run typecheck
+npm run lint
 npm start
 ```
 
-이미 저장소를 내려받았다면, 저장소 루트에서 `test` 브랜치로 이동한 뒤 실행합니다. 브랜치 이동 전 작업 중인 변경 사항을 정리해 주세요.
+- 팀원은 공유된 브랜치/PR을 받은 뒤 `npm ci`로 `package-lock.json` 기준 의존성을 설치합니다.
+- `npm run typecheck`: TypeScript 오류 검사. `npm run lint`: Expo 코드 검사.
+- `npm start`: 개발 서버 실행. 현재 직업 선택 테스트 화면이 표시됩니다.
+- 기기·에뮬레이터 실행 후 UI와 입력·선택·오류 동작은 별도로 확인해야 합니다.
 
-```bash
-git switch test
-git pull --ff-only
-cd frontend
-npm ci
-npm start
-```
+타입·코드 검사 통과 및 Android/iOS Hermes 번들 생성은 확인했습니다. 실제 기기 조작, 디자인 원본과의 일치, 로그인·가입·AI API 통신은 아직 검증하지 않았습니다. 상세 결과와 명령은 전환 기록에 있습니다.
 
-`npm ci`는 `package-lock.json`을 기준으로 필요한 패키지를 설치하며, 각 팀원의 컴퓨터에 `node_modules`를 생성합니다. 패키지 설정이 바뀌지 않았다면 이후에는 `frontend` 폴더에서 `npm start`로 실행할 수 있습니다.
+## 다음 작업: 이번 주 최우선은 로그인
 
-## Git에 공유하지 않는 파일
+| 순서 | 해야 할 일 | 완료 기준 |
+| --- | --- | --- |
+| 1 | 백엔드와 로그인 지원 범위·공개 DTO·오류·JWT·성공 이동 협의 | 요청/응답 예시, 테스트 서버·계정, 담당 범위가 기록됨 |
+| 2 | 로그인 테스트 UI를 실제 디자인에 맞게 보완 | 레이아웃·여백·버튼·오류 안내와 기기별 배치 확인 |
+| 3 | Expo Router로 로그인 진입 및 합의된 화면 이동 구성 | 로그인에 접근하고 성공 후 올바른 화면으로 이동 |
+| 4 | `services`의 실제 통신 및 인증 상태 연결 | 테스트 계정으로 로그인되고 합의한 토큰 정책 적용 |
+| 5 | 실패·반복 클릭·재시도·키보드·스크롤 테스트 | 기기에서 결과 기록, 검사 통과 후 PR 리뷰 |
 
-- `node_modules/`: 각 개발 환경에서 설치하는 패키지입니다.
-- `.expo/`: Expo의 로컬 개발 상태와 캐시입니다.
-- `dist/`, `web-build/`: 생성된 빌드 결과물입니다.
-- `.env`, `.env.*`: 실제 환경변수 파일입니다. 필요한 변수 이름과 예시값은 `.env.example`에 작성해 공유합니다.
-- 기타 로그, 인증서, 생성 파일: 기존 `.gitignore` 규칙을 따릅니다.
+협의 중에도 UI 다듬기와 샘플 데이터 기반 확인은 진행할 수 있습니다. 실제 API 형식은 합의 후 타입·검증·통신 함수에 반영합니다. 이메일/카카오 중 이번 주 범위는 아직 확정하지 않았습니다.
 
-`package.json`, `package-lock.json`, 앱 코드와 설정, `assets` 이미지는 함께 공유합니다. 앱 아이콘을 교체할 때는 `app.json`에서 사용하는 경로도 확인합니다.
+### 이미 확인된 보완점
+
+다음은 아직 수정되지 않은 후속 항목입니다.
+
+- 로그인: 카카오 버튼 표시가 이메일·비밀번호 입력 완료에 종속되어 있어 독립 로그인 진입 방식으로 조정할지 결정해야 합니다.
+- 로그인: 네트워크/서버 장애도 계정 정보 오류로 표시하므로 실제 오류 코드에 따라 나눠야 합니다.
+- 회원가입: HTTP 409를 이메일 중복으로 먼저 처리해 닉네임 중복이 잘못 표시될 수 있습니다. 구체 코드 우선으로 조정해야 합니다.
+- 직업 선택: 저장 실패 안내가 '마법사'로 고정되어 있어 실제 선택값에 맞춰야 합니다.
+- 탐험 지도: 번호 1~9, 선행관계, 3단계 진행 표시는 샘플입니다. 실제 서버 데이터로 교체해야 합니다.
+
+### 로그인 이후
+
+회원가입·약관·직업 저장 → 홈·학습 콘텐츠·진행도 → AI Tutor 대화·출처·사용량 → 퀴즈·보상·복습·설정 순으로 기능별 이슈와 PR을 나눕니다. 우선순위는 팀 일정에 따라 조정합니다.
+
+프론트는 **Node.js 공개 API**를 호출합니다. AI 내부 API와 모델 제공업체 키는 서버 전용입니다. 서버가 할 대화 저장·권한·사용량·중복 방지를 프론트만으로 구현하지 않습니다. 알려진 공개 경로와 미정 계약은 [전환 기록의 다음 작업](TYPESCRIPT_MIGRATION.md#이제부터-해야-할-일)을 참고하세요.
+
+## 코드 작성·리뷰 규칙
+
+- JSX 화면/컴포넌트는 `.tsx`, 일반 함수·상수·타입은 `.ts`로 작성합니다. 시작 파일 `index.js`와 도구 설정 `eslint.config.js`는 JavaScript를 유지합니다.
+- 한국어 주석으로 파일 목적, 주요 함수·상태·이벤트·콜백의 흐름을 설명합니다. 동작이 바뀌면 주석도 갱신합니다. 자세한 지침은 `frontend/AGENTS.md`를 확인합니다.
+- 기존 화면 콜백 타입, DB 테이블, AI 내부 DTO를 프론트의 최종 공개 API 형식으로 간주하지 않습니다.
+- Figma의 상태마다 파일을 만들기보다 같은 화면의 입력·로딩·오류·성공 상태로 구성합니다.
+- PR에는 변경한 범위, 테스트 결과, 미검증/미완료 항목을 구분해 적습니다. 파일 이름 변경도 함께 커밋합니다.
+
+## Git에 공유할 것
+
+코드·설정·`package.json`·`package-lock.json`·문서·이미지 리소스를 공유합니다. `.gitignore`에 따라 `node_modules/`, `.expo/`, `dist/`, 로그, 실제 `.env`와 키 파일은 제외합니다. 필요한 변수 이름은 실제 값 없이 `.env.example`로 공유할 수 있습니다.
+
+브랜치 이동이나 원격 변경 병합 전에는 현재 수정 파일을 확인합니다. 이번 TypeScript 전환과 주석·문서 작업은 현재 `test` 브랜치의 미커밋 변경으로 준비되어 있으며, 커밋·푸시는 작업자가 별도로 진행합니다. 이 문장의 상태는 2026-10-26 작업 기록 기준입니다.

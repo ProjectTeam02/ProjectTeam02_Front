@@ -1,4 +1,8 @@
-
+/**
+ * 여러 화면에서 공유하는 색상·간격·글꼴 값. 최종 UI 조정 시 공통 기준으로 사용합니다.
+ */
+import type { TextStyle } from 'react-native';
+// 상태별 의미를 가진 공통 색상입니다. 화면마다 중복한 색상은 추후 이곳으로 정리합니다.
 export const COLORS = {
     primary: '#1D3F91',
     soft: '#EAF0FF',
@@ -15,6 +19,7 @@ export const COLORS = {
     disabled: '#E4EAF2',
   };
   
+  // 화면·입력창·버튼의 공통 크기와 여백입니다.
   export const LAYOUT = {
     // 공통 간격 및 모서리
     gap: 12,
@@ -32,6 +37,7 @@ export const COLORS = {
     buttonHeight: 48,
   };
   
+  // satisfies로 글꼴 설정을 검사하면서 fontWeight 등의 구체 타입을 유지합니다.
   export const TYPOGRAPHY = {
     title: {
       fontSize: 22,
@@ -61,5 +67,5 @@ export const COLORS = {
       lineHeight: 16,
       fontWeight: '500',
     },
-  };
+  } satisfies Record<string, TextStyle>;
   
