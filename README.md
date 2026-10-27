@@ -4,7 +4,28 @@ Expo + React Native + TypeScript 기반 LEREN 모바일 프론트엔드 저장�
 
 **현재는 개발 기반과 테스트용 화면을 준비한 단계입니다. 실제 서비스 UI 다듬기, 화면 이동, 사용자 인증과 서버 API 연결은 추가 작업이 필요합니다.**
 
-상태 기준일: 2026-10-26. 자세한 전환 내역과 작업 체크리스트는 [TypeScript 전환 기록](TYPESCRIPT_MIGRATION.md)을 참고하세요.
+상태 기준일: 2026-10-27. 자세한 전환 내역과 작업 체크리스트는 [TypeScript 전환 기록](TYPESCRIPT_MIGRATION.md)을 참고하세요.
+
+## 실행 환경과 버전 담당 파일
+
+iPhone에 설치된 Expo Go가 SDK 58을 사용하여, 프로젝트도 SDK 57에서 58로 업데이트했습니다.
+
+| 패키지 | 이전 | 현재 |
+| --- | --- | --- |
+| expo | ~57.0.27 | ~58.0.19 |
+| react-native | 0.86.3 | 0.88.0 |
+| react | 19.2.3 | 19.3.0 |
+| expo-status-bar | ~57.0.1 | ~58.0.4 |
+| react-native-safe-area-context | ~5.7.0 | ~5.10.1 |
+| @types/react | ~19.2.4 | ~19.3.0 |
+| eslint-config-expo | ~57.0.2 | ~58.0.4 |
+
+- `frontend/package.json`: 사용할 Expo SDK, React Native, React 및 관련 패키지 버전을 선언합니다. Expo와 React Native는 호환 조합으로 함께 관리합니다.
+- `frontend/package-lock.json`: 하위 의존성까지 실제 설치 버전을 고정합니다. 팀원은 두 파일을 함께 받아 `npm ci`를 실행합니다.
+- `frontend/app.json`: 앱 이름·아이콘·기기 설정과 플러그인을 관리합니다. `version: 1.0.0`은 앱 자체의 제품 버전이며 Expo SDK 번호가 아닙니다. SDK 58 정렬 과정에서 `expo-status-bar` 플러그인을 추가했습니다.
+- `frontend/App.tsx`: 첫 화면을 구성합니다. SDK 버전을 결정하는 파일이 아니며 기존 직업 선택 미리보기를 유지합니다.
+
+현재 Node.js v24.14.1 환경에서 검사했습니다. Expo Go는 프로젝트와 같은 SDK를 지원해야 하며, 향후 Expo Go 업데이트 시 호환성을 다시 확인합니다. SDK 58 조합 및 업그레이드 절차는 [Expo 공식 안내](https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/)를 따릅니다.
 
 ## 현재 구현된 범위
 
@@ -72,12 +93,20 @@ npm run lint
 npm start
 ```
 
+SDK 57 개발 서버가 켜져 있다면 해당 터미널에서 `Ctrl + C`로 종료한 뒤 캐시를 비우고 다시 실행합니다.
+
+```powershell
+npm.cmd start -- --clear
+```
+
+재시작 후 새 QR 코드를 iPhone의 SDK 58 Expo Go에서 엽니다. 코드·번들 검증과 실제 휴대폰의 화면 동작 검증은 구분합니다.
+
 - 팀원은 공유된 브랜치/PR을 받은 뒤 `npm ci`로 `package-lock.json` 기준 의존성을 설치합니다.
 - `npm run typecheck`: TypeScript 오류 검사. `npm run lint`: Expo 코드 검사.
 - `npm start`: 개발 서버 실행. 현재 직업 선택 테스트 화면이 표시됩니다.
 - 기기·에뮬레이터 실행 후 UI와 입력·선택·오류 동작은 별도로 확인해야 합니다.
 
-타입·코드 검사 통과 및 Android/iOS Hermes 번들 생성은 확인했습니다. 실제 기기 조작, 디자인 원본과의 일치, 로그인·가입·AI API 통신은 아직 검증하지 않았습니다. 상세 결과와 명령은 전환 기록에 있습니다.
+SDK 58에서 타입·코드 검사, Expo Doctor 20/20 검사 및 Android/iOS Hermes 번들 생성을 확인했습니다. 결과는 Git에서 제외되는 `frontend/dist/sdk58-check/`에 있습니다. 실제 기기 조작, 디자인 원본과의 일치, 로그인·가입·AI API 통신은 아직 검증하지 않았습니다. 상세 결과와 명령은 전환 기록에 있습니다.
 
 ## 다음 작업: 이번 주 최우선은 로그인
 
@@ -119,4 +148,4 @@ npm start
 
 코드·설정·`package.json`·`package-lock.json`·문서·이미지 리소스를 공유합니다. `.gitignore`에 따라 `node_modules/`, `.expo/`, `dist/`, 로그, 실제 `.env`와 키 파일은 제외합니다. 필요한 변수 이름은 실제 값 없이 `.env.example`로 공유할 수 있습니다.
 
-브랜치 이동이나 원격 변경 병합 전에는 현재 수정 파일을 확인합니다. 이번 TypeScript 전환과 주석·문서 작업은 현재 `test` 브랜치의 미커밋 변경으로 준비되어 있으며, 커밋·푸시는 작업자가 별도로 진행합니다. 이 문장의 상태는 2026-10-26 작업 기록 기준입니다.
+브랜치 이동이나 원격 변경 병합 전에는 현재 수정 파일을 확인합니다. TypeScript 전환과 주석·문서 정리는 `7919399`로 `test`에 반영됐습니다. 2026-10-27 SDK 58 업그레이드는 별도 작업이며 커밋·푸시는 아직 수행하지 않았습니다. 팀 분류상 이 업그레이드의 커밋 메시지는 `build: Expo SDK 58 및 호환 패키지 업데이트`를 사용할 수 있습니다.

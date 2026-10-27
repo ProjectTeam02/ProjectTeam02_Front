@@ -2,7 +2,7 @@
 
 작성일: 2026-10-26
 
-최신화: 같은 날 코드 분석, 설명 주석 추가 및 이번 주 로그인 목표 반영.
+최신화: 2026-10-27. 코드 분석·설명 주석·이번 주 로그인 목표 및 Expo SDK 58 업그레이드 반영.
 
 ## 이번에 한 작업
 
@@ -24,7 +24,7 @@
 | `eslint.config.js` (신규) | Expo 기본 ESLint 설정 |
 | `package.json`, `package-lock.json` | TypeScript·React 타입·ESLint 개발 의존성 및 `typecheck`/`lint` 명령 추가 |
 
-기존 앱 소스 15개를 전환했고, 타입을 가진 오류 처리 유틸리티를 하나 추가했습니다. React Native 타입은 자체 패키지에서 가져오며 별도 `@types/react-native`를 추가하지 않았습니다. Expo SDK와 React Native 버전은 유지했습니다.
+기존 앱 소스 15개를 전환했고, 타입을 가진 오류 처리 유틸리티를 하나 추가했습니다. React Native 타입은 자체 패키지에서 가져오며 별도 `@types/react-native`를 추가하지 않았습니다. TypeScript 전환 당시에는 Expo SDK와 React Native 버전을 유지했고, 이후 별도 작업으로 아래 SDK 58 업그레이드를 진행했습니다.
 
 `index.js`는 Expo의 JavaScript 시작 파일로 유지합니다. `./App` import가 `App.tsx`를 찾습니다. 도구 설정 파일 `eslint.config.js`, 이미지, `app.json`도 TypeScript 전환 대상으로 보지 않습니다.
 
@@ -62,11 +62,53 @@ JSX를 포함하는 새 화면/컴포넌트는 `.tsx`, 일반 함수·데이터�
 
 ## 검증 결과
 
+아래 SDK 57 기반 전환 검증과 이후 SDK 58 검증을 구분합니다.
+
 - `npm run typecheck`: 통과.
 - `npm run lint`: 통과.
 - 오류 해석 유틸리티 스모크 검사: 일반 Error, 서버 오류, HTTP 409, 직접 코드 우선 읽기 및 null 등 예상 밖 입력의 안전한 해석 확인. 화면의 회원가입 409 분기 전체가 검증된 것은 아니며 아래 오분류 보완이 남아 있습니다.
 - `npx expo export --platform android --platform ios --output-dir dist/typescript-check --max-workers 2`: 통과. 기존 `index.js` → `App.tsx` 진입점으로 양쪽 Hermes 번들을 생성했습니다. 결과는 Git에서 제외되는 `frontend/dist/typescript-check/`에 있습니다.
 - 실제 기기/에뮬레이터 조작, 로그인·직업 저장·AI 서버 통신은 검증하지 않았습니다.
+
+## 2026-10-27: iPhone Expo Go에 맞춘 SDK 58 업그레이드
+
+### 이유와 담당 파일
+
+아이폰 Expo Go는 SDK 58, 기존 프로젝트는 SDK 57이어서 실행 단계에서 호환 오류가 발생했습니다. TypeScript 문법 오류가 아니라 개발 실행 환경의 SDK 불일치였습니다.
+
+`frontend/package.json`에서 패키지 버전을 정하고, `package-lock.json`으로 실제 설치 버전을 기록합니다. `app.json`의 `version`은 앱 제품 버전이므로 SDK 번호 58로 바꾸지 않습니다. 화면을 보여주는 `App.tsx`도 버전 선택과 별개입니다.
+
+### 변경 내용
+
+| 패키지 | 변경 전 선언 | 변경 후 선언 |
+| --- | --- | --- |
+| expo | ~57.0.27 | ~58.0.19 |
+| react-native | 0.86.3 | 0.88.0 |
+| react | 19.2.3 | 19.3.0 |
+| expo-status-bar | ~57.0.1 | ~58.0.4 |
+| react-native-safe-area-context | ~5.7.0 | ~5.10.1 |
+| @types/react | ~19.2.4 | ~19.3.0 |
+| eslint-config-expo | ~57.0.2 | ~58.0.4 |
+
+- Expo 공식 버전 정렬로 의존성과 lock 파일을 함께 갱신했습니다.
+- `app.json`에는 정렬 과정에서 필요한 `expo-status-bar` 플러그인이 추가됐습니다.
+- 기존 TypeScript·화면·콜백 코드는 이번 업그레이드에서 수정하지 않았습니다.
+- `ios/`, `android/` 네이티브 폴더를 새로 생성하지 않았습니다.
+- 기존 로그인 UI·인증·API 미연결 상태와 후속 체크리스트는 유지합니다.
+
+### SDK 58에서 확인한 결과
+
+- `npm run typecheck`: 통과.
+- `npm run lint`: 통과.
+- `npx expo-doctor`: 20/20 통과.
+- `npx expo export --platform android --platform ios --output-dir dist/sdk58-check --max-workers 2`: 통과, 양 플랫폼 Hermes 번들 생성.
+- 실제 iPhone에서 새 QR을 열어 화면·입력·선택 동작을 확인하는 단계는 남아 있습니다. 번들 생성만으로 휴대폰의 실행 성공을 확정하지 않습니다.
+
+### 팀원 재실행
+
+공유된 변경을 받은 팀원은 `frontend/`에서 `npm ci`를 실행합니다. 기존 서버를 `Ctrl + C`로 종료한 후 `npm.cmd start -- --clear`로 재시작하고 새 QR 코드를 엽니다. 사용 중인 Expo Go도 SDK 58을 지원해야 합니다.
+
+2026-10-27 확인 기준 TypeScript 전환은 커밋 `7919399`로 `test`에 반영됐고, SDK 업그레이드는 별도 미커밋 작업입니다. 이번 업그레이드의 팀 커밋 분류는 `build`입니다.
 
 ## 현재 콜백 타입은 공개 API 명세가 아닙니다
 
@@ -81,7 +123,7 @@ JSX를 포함하는 새 화면/컴포넌트는 `.tsx`, 일반 함수·데이터�
 ### 1. 전환 범위 공유 및 리뷰
 
 - `.js` 파일이 `.tsx`/`.ts`로 바뀌었으므로 다른 브랜치 작업과 합칠 때 같은 이름의 JavaScript 파일을 다시 만들지 않습니다.
-- 파일 이름 변경을 포함해 커밋하고, 프론트 저장소에 TypeScript 전환 PR을 올려 리뷰합니다. 이번 작업에서 커밋·push·PR 생성은 하지 않았습니다.
+- TypeScript 전환은 파일 이름 변경을 포함한 커밋 `7919399`로 `test`에 반영됐습니다. 팀 통합 브랜치의 PR 리뷰·반영 여부를 확인하고, 이후 SDK 58 변경은 별도 커밋·리뷰로 관리합니다. 에이전트는 커밋·push·PR 생성을 실행하지 않았습니다.
 - 리뷰 전에 `npm ci`, 타입 검사, 코드 검사 및 실제 화면 실행을 확인합니다.
 
 ### 2. 이번 주 P0: 백엔드와 협력한 로그인 UI 및 연동
