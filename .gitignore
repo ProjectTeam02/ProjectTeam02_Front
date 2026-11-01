@@ -1,0 +1,15 @@
+# 이 브랜치의 개인 설정과 설치/생성 결과는 어느 폴더에서도 공유하지 않습니다.
+**/node_modules/
+**/.env
+**/.env.*
+!**/.env.example
+**/dist/
+**/coverage/
+**/.expo/
+**/*.tsbuildinfo
+**/*.log
+**/*.pem
+**/*.key
+**/*.p12
+**/*.p8
+**/.DS_Store
