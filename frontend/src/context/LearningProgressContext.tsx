@@ -1,4 +1,4 @@
-/** 화면 간 진행·개인 설정을 메모리에서 공유합니다. 샘플 기록을 채우지 않으며 영구 저장 API는 미연결입니다. */
+/** 화면 간 진행·개인 설정을 메모리에서 공유합니다. test의 예시 초기값은 선택적으로 주입하며 영구 저장 API는 미연결입니다. */
 import { createContext, useContext, useRef, useState, type ReactNode } from 'react';
 import { useLearningContent } from './LearningContentContext';
 import { useAuth } from './AuthContext';
@@ -18,17 +18,18 @@ interface LearningProgressState {
 const LearningProgressContext = createContext<LearningProgressState | null>(null);
 const INITIAL_PROFILE: LearningProfile = { nickname: '', email: '', job: 'mage', coins: 0, xp: 0, economyXp: 0, level: 1, economyLevel: 1 };
 
-export function LearningProgressProvider({ children }: { children: ReactNode }) {
+export interface LearningProgressSeed { profile?: Partial<LearningProfile>; schedules?: Schedule[] }
+export function LearningProgressProvider({ children, initialState }: { children: ReactNode; initialState?: LearningProgressSeed }) {
   const { battleRules, rewards, getRegionForStep } = useLearningContent();
   const { session } = useAuth();
   // 인증 상태가 바뀌면 상위 key가 이 Provider를 새로 만듭니다. 사용자별 서버 진행도 조회는 아직 연결하지 않았습니다.
-  const [profile, setProfile] = useState<LearningProfile>(() => ({ ...INITIAL_PROFILE,
+  const [profile, setProfile] = useState<LearningProfile>(() => ({ ...INITIAL_PROFILE, ...initialState?.profile,
     nickname: session?.user.nickname ?? INITIAL_PROFILE.nickname,
     email: session?.user.email ?? INITIAL_PROFILE.email,
-    level: session?.user.level ?? 1,
-    xp: session?.user.totalExp ?? 0,
-    economyLevel: session?.user.economyLevel ?? 1,
-    economyXp: session?.user.economyExp ?? 0,
+    level: initialState?.profile?.level ?? session?.user.level ?? 1,
+    xp: initialState?.profile?.xp ?? session?.user.totalExp ?? 0,
+    economyLevel: initialState?.profile?.economyLevel ?? session?.user.economyLevel ?? 1,
+    economyXp: initialState?.profile?.economyXp ?? session?.user.economyExp ?? 0,
   }));
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const [lastResult, setLastResult] = useState<QuizResult | null>(null);
@@ -38,7 +39,7 @@ export function LearningProgressProvider({ children }: { children: ReactNode }) 
   const [equippedCostume, setEquipped] = useState('basic');
   const [notifications, setNotifications] = useState(true);
   const [notificationTime, setNotificationTime] = useState('20:00');
-  const [schedules, setSchedules] = useState<Schedule[]>([]);
+  const [schedules, setSchedules] = useState<Schedule[]>(() => initialState?.schedules?.map(item => ({ ...item })) ?? []);
   // 연속 탭에도 같은 단계 보상과 코스튬 구매가 두 번 처리되지 않도록 현재값을 함께 관리합니다.
   const stateRef = useRef({ profile, completedSteps, ownedCostumes });
   const finishQuiz = (input: QuizInput) => {

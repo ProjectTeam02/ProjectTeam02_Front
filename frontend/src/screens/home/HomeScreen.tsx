@@ -1,6 +1,6 @@
 /** 홈 대시보드: 백엔드에서 받은 지역·단계 이름과 로컬 진행 상태를 조합해 학습 동선을 만듭니다. */
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Body, Heading, LinkRow, Progress, Row } from '../../components/ui/Primitives';
 import LearningContentState from '../../components/ui/LearningContentState';
@@ -19,7 +19,7 @@ const IMAGES = {
 const JOB_NAMES = { warrior: '검사', mage: '마법사', archer: '궁수' };
 export default function HomeScreen() {
   const { profile } = useLearningProgress();
-  return <Screen title="홈" back={false} tabs>
+  return <Screen title="홈" back={false} tabs right={<Pressable accessibilityRole="button" onPress={() => router.push('/screens')} style={s.preview}><Text style={s.previewLabel}>화면 목록</Text></Pressable>}>
     <LerenCard variant="info" style={s.hero}>
       <LerenCharacter source={IMAGES[profile.job]} size={64} accessibilityLabel={JOB_NAMES[profile.job]} />
       <Heading>{profile.nickname}님, 오늘도 한 걸음!</Heading>

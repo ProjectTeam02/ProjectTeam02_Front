@@ -12,17 +12,19 @@ import { PixelifySans_700Bold } from '@expo-google-fonts/pixelify-sans/700Bold';
 import { LearningProgressProvider } from '../context/LearningProgressContext';
 import { LearningContentProvider } from '../context/LearningContentContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { fetchDevelopmentLearningCatalog } from '../services/devLearning';
+import { PREVIEW_SEED } from '../test-support/previewSeed';
 import { COLORS } from '../constants/theme';
 export default function RootLayout() {
   const [loaded, error] = useFonts({ NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, PixelifySans_700Bold });
   if (!loaded && !error) return <View style={s.loading}><ActivityIndicator color={COLORS.primary} /><Text>화면을 준비하고 있어요.</Text></View>;
-  return <SafeAreaProvider><AuthProvider><LearningContentProvider><AuthenticatedScreens /></LearningContentProvider></AuthProvider></SafeAreaProvider>;
+  return <SafeAreaProvider><AuthProvider><LearningContentProvider loader={fetchDevelopmentLearningCatalog}><AuthenticatedScreens /></LearningContentProvider></AuthProvider></SafeAreaProvider>;
 }
 
 /** 주소 직접 입력이나 뒤로 가기로 인증 없이 학습 화면에 들어가지 않게 합니다. 서버 권한 검사와는 별도입니다. */
 function AuthenticatedScreens() {
   const { session, sessionRevision } = useAuth();
-  return <LearningProgressProvider key={sessionRevision}><StatusBar style="dark" />
+  return <LearningProgressProvider key={sessionRevision} initialState={PREVIEW_SEED}><StatusBar style="dark" />
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.surface }, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
@@ -30,7 +32,7 @@ function AuthenticatedScreens() {
       <Stack.Screen name="reset-password" />
       <Stack.Screen name="jobs" />
       <Stack.Protected guard={!!session}>
-        {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications'].map((name) => <Stack.Screen key={name} name={name} />)}
+        {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications', 'screens'].map((name) => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>
     </Stack>
   </LearningProgressProvider>;
