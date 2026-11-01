@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "source": "figma-test-fixture",
+  "regions": [
+    {
+      "id": 1,
+      "title": "경제 기초",
+      "description": "선택의 의미와 돈의 역할을 알아봐요.",
+      "prerequisite": null,
+      "boss": {
+        "id": "1-boss",
+        "questionIds": ["money-storage", "scarcity", "opportunity", "money-exchange", "money"]
+      },
+      "lessons": [
+        {
+          "id": "1-1",
+          "title": "선택과 기회비용",
+          "introTitle": "모든 것을 동시에 할 수 있을까요?",
+          "intro": "시간과 자원은 한정되어 있어요.\n원하는 일을 모두 할 수 없으므로 선택이 필요해요.",
+          "conceptTitle": "선택에는 기회비용이 있어요",
+          "concept": "어떤 선택 때문에 포기한 대안 중 가장 큰 가치가 기회비용이에요.",
+          "example": "같은 1시간에 운동과 독서를 할 수 있다면, 운동을 선택할 때 포기한 독서의 가치가 기회비용이 될 수 있어요.",
+          "summary": ["시간과 자원은 한정되어 있어요.", "하나를 선택하면 다른 대안을 포기하게 돼요.", "포기한 대안 중 가장 큰 가치가 기회비용이에요."],
+          "questionIds": ["opportunity", "money", "scarcity"]
+        },
+        {
+          "id": "1-2",
+          "title": "돈의 역할",
+          "introTitle": "돈이 없다면 어떻게 물건을 살까요?",
+          "intro": "서로 원하는 물건이 달라 물물교환은 쉽지 않아요.\n돈은 이런 불편을 줄여줘요.",
+          "conceptTitle": "돈은 세 가지 역할을 해요",
+          "concept": "돈은 교환의 매개, 가치의 척도, 가치의 저장 수단이에요.",
+          "example": "책 한 권과 우유 한 팩의 가격을 돈으로 표시하면 가치를 비교할 수 있고, 오늘 번 돈을 모아 내일 사용할 수도 있어요.",
+          "summary": ["교환의 매개: 돈을 주고 물건을 받아요.", "가치의 척도: 돈으로 가격을 비교해요.", "가치의 저장: 현재의 구매력을 미래로 옮겨요."],
+          "questionIds": ["money", "money-exchange", "money-storage"]
+        }
+      ]
+    }
+  ],
+  "questions": [
+    {
+      "id": "opportunity",
+      "concept": "기회비용",
+      "question": "선택 때문에 포기한 대안의 가치를 가리키는 개념은 무엇일까요?",
+      "choices": ["고정비용", "기회비용", "평균비용", "매몰비용"],
+      "answer": 1,
+      "explanation": "선택 때문에 포기한 대안 중 가장 큰 가치가 기회비용이에요."
+    },
+    {
+      "id": "money",
+      "concept": "돈의 역할",
+      "question": "돈이 서로 다른 상품의 가격을 비교하게 하는 역할은 무엇일까요?",
+      "choices": ["가치의 척도", "생산 수단", "희소성 제거", "자원의 무한 공급"],
+      "answer": 0,
+      "explanation": "돈은 가치를 나타내는 공통 기준이 되어 서로 다른 물건의 가격을 비교하게 해줘요."
+    },
+    {
+      "id": "scarcity",
+      "concept": "희소성",
+      "question": "경제에서 희소성이 생기는 이유로 알맞은 것은 무엇일까요?",
+      "choices": ["가격이 항상 같아서", "시간과 자원이 한정되어 있어서", "돈의 역할이 없어서", "모든 재화가 무료여서"],
+      "answer": 1,
+      "explanation": "사람의 욕구에 비해 시간과 자원이 한정되어 있어 선택이 필요해요."
+    },
+    {
+      "id": "money-storage",
+      "concept": "돈의 역할 · 가치의 저장",
+      "question": "돈을 보유했다가 나중에 사용하는 것은 돈의 어떤 역할과 연결될까요?",
+      "choices": ["교환의 매개", "가치의 저장", "생산의 증가", "희소성의 제거"],
+      "answer": 1,
+      "explanation": "돈은 나중에 사용하기 위해 가치를 저장하는 역할을 해요."
+    },
+    {
+      "id": "money-exchange",
+      "concept": "돈의 역할 · 교환의 매개",
+      "question": "돈이 물건과 서비스를 거래할 때 쓰이는 역할은 무엇일까요?",
+      "choices": ["교환의 매개", "가치의 저장", "자원의 무한 공급", "희소성의 제거"],
+      "answer": 0,
+      "explanation": "돈으로 물건과 서비스를 사고팔 수 있는 것은 돈이 교환의 매개 역할을 하기 때문이에요."
+    }
+  ],
+  "battleRules": {
+    "normal": { "hp": 2, "maxQuestions": 3 },
+    "boss": { "hp": 4, "maxQuestions": 5 }
+  },
+  "rewards": { "coins": 50, "xp": 30, "economyXp": 20 }
+}
