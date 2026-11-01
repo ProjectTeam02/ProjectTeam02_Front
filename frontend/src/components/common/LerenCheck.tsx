@@ -41,6 +41,7 @@ export default function LerenCheck({
   return (
     <Pressable
       accessibilityRole="checkbox"
+      aria-checked={checked}
       accessibilityState={{ checked, disabled }}
       onPress={() => onChange?.(!checked)}
       disabled={disabled}

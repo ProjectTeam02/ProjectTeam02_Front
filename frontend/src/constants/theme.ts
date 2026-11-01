@@ -40,29 +40,35 @@ export const COLORS = {
   // satisfies로 글꼴 설정을 검사하면서 fontWeight 등의 구체 타입을 유지합니다.
   export const TYPOGRAPHY = {
     title: {
+      fontFamily: 'NotoSansKR_700Bold',
       fontSize: 22,
       lineHeight: 32,
       fontWeight: '700',
     },
     heading: {
+      fontFamily: 'NotoSansKR_700Bold',
       fontSize: 18,
       lineHeight: 26,
       fontWeight: '700',
     },
     label: {
+      fontFamily: 'NotoSansKR_700Bold',
       fontSize: 14,
       lineHeight: 22,
       fontWeight: '700',
     },
     body: {
+      fontFamily: 'NotoSansKR_400Regular',
       fontSize: 14,
       lineHeight: 22,
     },
     small: {
+      fontFamily: 'NotoSansKR_400Regular',
       fontSize: 12,
       lineHeight: 18,
     },
     micro: {
+      fontFamily: 'NotoSansKR_500Medium',
       fontSize: 10,
       lineHeight: 16,
       fontWeight: '500',

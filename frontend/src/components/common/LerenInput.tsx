@@ -54,9 +54,9 @@ export default function LerenInput({
     <View style={styles.container}>
 
       {/* 입력 항목 제목 */}
-      <Text style={styles.label}>
+      {!!label && <Text style={styles.label}>
         {label}
-      </Text>
+      </Text>}
 
       {/* 텍스트 입력창 */}
       <TextInput
@@ -70,7 +70,7 @@ export default function LerenInput({
         editable={editable}
         autoCapitalize="none"
         autoCorrect={false}
-        accessibilityLabel={label}
+        accessibilityLabel={label || placeholder}
         accessibilityState={{
           disabled: !editable,
         }}
