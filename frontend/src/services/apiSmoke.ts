@@ -3,6 +3,9 @@
  * 실제 JSON 계약을 검사하며 오류를 예시 데이터로 바꾸지 않습니다. 토큰과 응답은 로그에 남기지 않습니다.
  * 기존 인증 서비스도 같은 origin 검증을 사용해 원격 HTTP로 비밀번호·토큰을 보내지 않게 합니다.
  */
+import { getApiBaseUrl, getAuthenticatedApiBaseUrl } from './apiConfig.ts';
+export { getApiBaseUrl, getAuthenticatedApiBaseUrl } from './apiConfig.ts';
+
 export interface BackendHealth {
   service: 'leren-backend';
   status: 'UP';
@@ -25,28 +28,6 @@ export interface LearningHistoryPage {
   pageSize: number;
   total: number;
   totalPages: number;
-}
-
-/** Expo가 정적으로 치환할 수 있도록 환경변수를 점 표기법으로 읽습니다. */
-export function getApiBaseUrl(): string {
-  const configured = process.env.EXPO_PUBLIC_API_URL?.trim().replace(/\/+$/, '');
-  if (!configured) throw new Error('EXPO_PUBLIC_API_URL에 확인된 백엔드 주소를 지정해 주세요.');
-  let url: URL;
-  try { url = new URL(configured); } catch { throw new Error('백엔드 주소는 http:// 또는 https://로 시작해야 해요.'); }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
-    throw new Error('백엔드 주소에는 경로·인증 정보 없이 서버 주소만 넣어 주세요.');
-  }
-  return configured;
-}
-
-/** 공개 HTTP 상태 확인과 달리 인증 정보는 HTTPS 또는 이 PC의 loopback에만 보냅니다. */
-export function getAuthenticatedApiBaseUrl(): string {
-  const baseUrl = getApiBaseUrl();
-  const url = new URL(baseUrl);
-  if (url.protocol !== 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(url.hostname)) {
-    throw new Error('로그인과 내 이력 조회에는 확인된 HTTPS 도메인이 필요해요. 원격 HTTP 주소로 인증 정보를 보내지 않습니다.');
-  }
-  return baseUrl;
 }
 
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);

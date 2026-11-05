@@ -1,5 +1,7 @@
 # Leren 읽기 전용 API 연동 테스트
 
+후속 로컬 카카오 작업은 실제 원본 `test@35409c1`을 기반으로 별도 브랜치에 적용했습니다. `.env.local`은 `http://localhost:3000`이며 PC 웹 카카오 버튼을 실제 `start/callback/exchange` 흐름에 연결했습니다. 최신 test에 있던 개발용 학습 JSON 로더·시드·화면 목록은 보존했습니다. 실행과 현재 검증 범위는 [KAKAO_LOCAL.md](KAKAO_LOCAL.md)를 우선 참고합니다. 아래 기록은 최초 `b4a0d15` 기준의 읽기 전용 API 테스트와 당시 결과이며, 학습 공급 함수 미연결 설명은 그 당시 상태입니다.
+
 별도 로컬 브랜치 `codex/leren-api-smoke-20261106`에서만 작업했습니다. 원본 프론트 `develop`과 EC2 설정은 변경하지 않았습니다. 기반 프론트 커밋은 `b4a0d15dc0b5e236996e0b19af34057a4c763dca`입니다.
 
 ## 실행

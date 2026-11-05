@@ -1,6 +1,6 @@
 /**
  * 4번 페이지의 큰 Leren 로고 초기 화면입니다.
- * 이메일 로그인은 기존 백엔드로 실제 인증합니다. 개발 중에는 읽기 전용 API 테스트 화면을 열 수 있습니다.
+ * 이메일 로그인과 PC 웹의 실제 카카오 인증을 시작합니다. 개발 중에는 읽기 API 테스트 화면도 열 수 있습니다.
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -15,10 +15,10 @@ import { useAuth } from '../../context/AuthContext';
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function WelcomeScreen() {
-  const { signIn } = useAuth();
+  const { signIn, startKakaoSignIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [socialNotice, setSocialNotice] = useState(false);
+  const [socialBusy, setSocialBusy] = useState(false);
   const [accountNotice, setAccountNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +26,7 @@ export default function WelcomeScreen() {
 
   // 성공한 서버 응답을 받은 뒤에만 홈을 엽니다. 실패한 입력은 화면에 남겨 다시 시도할 수 있게 합니다.
   const submit = async () => {
-    if (!ready || busy) return;
+    if (!ready || busy || socialBusy) return;
     setBusy(true); setError('');
     try {
       await signIn(email.trim(), password);
@@ -35,6 +35,15 @@ export default function WelcomeScreen() {
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : '로그인하지 못했어요. 다시 시도해 주세요.');
     } finally { setBusy(false); }
+  };
+
+  // 백엔드가 발급한 카카오 인증 주소로 이동합니다. 준비 실패는 실제 오류로 안내합니다.
+  const social = async () => {
+    if (busy || socialBusy) return;
+    setSocialBusy(true); setError('');
+    try { await startKakaoSignIn(); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : '카카오 로그인을 시작하지 못했어요.'); }
+    finally { setSocialBusy(false); }
   };
 
   return (
@@ -48,7 +57,7 @@ export default function WelcomeScreen() {
         <Text style={styles.heading}>경제 모험을 이어가볼까요?</Text>
         <LerenInput label="" placeholder="이메일" value={email} onChangeText={setEmail} keyboardType="email-address" autoComplete="email" error={email.length > 0 && !EMAIL.test(email.trim()) ? '이메일 형식을 확인해 주세요' : ''} />
         <LerenInput label="" placeholder="비밀번호" value={password} onChangeText={setPassword} secure autoComplete="current-password" />
-        <LerenButton title="로그인" disabled={!ready || busy} loading={busy} onPress={submit} />
+        <LerenButton title="로그인" disabled={!ready || busy || socialBusy} loading={busy} onPress={submit} />
         {!!error && <Notice tone="error">{error}</Notice>}
         <View style={styles.recoveryLinks}>
           <Pressable accessibilityRole="button" onPress={() => setAccountNotice(true)} style={styles.textButton}><Text style={styles.mutedLink}>아이디 찾기</Text></Pressable>
@@ -60,10 +69,9 @@ export default function WelcomeScreen() {
           <Text style={styles.link}>처음 오셨나요? 회원가입</Text>
         </Pressable>
         <Text style={styles.socialLabel}>간편 소셜 로그인</Text>
-        <Pressable accessibilityRole="button" onPress={() => setSocialNotice(true)} style={styles.kakao}>
-          <Text style={styles.kakaoLabel}>카카오로 시작하기</Text>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy || socialBusy, busy: socialBusy }} disabled={busy || socialBusy} onPress={() => { void social(); }} style={styles.kakao}>
+          <Text style={styles.kakaoLabel}>{socialBusy ? '카카오 연결 중…' : '카카오로 시작하기'}</Text>
         </Pressable>
-        {socialNotice && <Notice>카카오 인증은 아직 연결하지 않았어요. 가입된 이메일 계정으로 로그인해 주세요.</Notice>}
       </View>
       <Text style={styles.footer}>오늘의 경제 지식이 내일의 힘이 돼요.</Text>
       <Text style={styles.preview}>이메일 로그인은 실제 인증 · 학습 기록은 임시 저장입니다.</Text>

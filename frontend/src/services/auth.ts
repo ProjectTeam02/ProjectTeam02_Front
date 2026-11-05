@@ -2,21 +2,9 @@
  * 이메일과 비밀번호를 백엔드에 보내 로그인합니다.
  * 서버 주소는 프론트 .env에서 읽고 HTTPS/loopback 검증 후 요청합니다. 발급받은 토큰은 호출한 곳에 반환합니다.
  */
-import { getAuthenticatedApiBaseUrl } from './apiSmoke';
-
-export interface LoginResult {
-  user: {
-    userId: string;
-    nickname: string;
-    email: string | null;
-    level?: number;
-    totalExp?: number;
-    economyLevel?: number;
-    economyExp?: number;
-  };
-  accessToken: string;
-  refreshToken: string;
-}
+import { getAuthenticatedApiBaseUrl } from './apiConfig.ts';
+import { parseLoginResponse, type LoginResult } from './authContract.ts';
+export type { LoginResult } from './authContract.ts';
 
 interface LoginResponse {
   success: boolean;
@@ -50,24 +38,7 @@ export async function login(
       throw new Error(body.message || '로그인 요청에 실패했습니다.');
     }
 
-    if (typeof body.data.accessToken !== 'string' || !body.data.accessToken
-      || typeof body.data.refreshToken !== 'string' || !body.data.refreshToken
-      || typeof body.data.user?.userId !== 'string' || !body.data.user.userId
-      || typeof body.data.user.nickname !== 'string'
-      || (body.data.user.email !== null && typeof body.data.user.email !== 'string')) {
-      throw new Error('서버의 로그인 응답 형식을 확인해 주세요.');
-    }
-    // 성장 값은 서버가 제공한 경우만 사용합니다. 잘못된 값을 예시 레벨/EXP로 감추지 않습니다.
-    for (const field of ['level', 'totalExp', 'economyLevel', 'economyExp'] as const) {
-      const value = body.data.user[field];
-      const minimum = field === 'level' || field === 'economyLevel' ? 1 : 0;
-      if (value !== undefined && (typeof value !== 'number' || !Number.isInteger(value) || value < minimum)) {
-        throw new Error('서버의 성장 정보 형식을 확인해 주세요.');
-      }
-    }
-
-    // 비밀번호와 토큰은 콘솔에 출력하지 않습니다.
-    return body.data;
+    return parseLoginResponse(body);
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
       throw new Error('서버 응답 시간이 초과됐어요.');

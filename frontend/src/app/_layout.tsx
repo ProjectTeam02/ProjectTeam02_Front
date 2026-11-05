@@ -32,6 +32,7 @@ function AuthenticatedScreens() {
       <Stack.Screen name="reset-password" />
       <Stack.Screen name="jobs" />
       <Stack.Screen name="api-test" />
+      <Stack.Screen name="auth/callback" />
       <Stack.Protected guard={!!session}>
         {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications', 'screens'].map((name) => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>
