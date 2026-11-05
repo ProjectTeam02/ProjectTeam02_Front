@@ -1,7 +1,8 @@
 /**
  * 이메일과 비밀번호를 백엔드에 보내 로그인합니다.
- * 서버 주소는 프론트 .env에서 읽고, 발급받은 토큰은 호출한 곳에 반환합니다.
+ * 서버 주소는 프론트 .env에서 읽고 HTTPS/loopback 검증 후 요청합니다. 발급받은 토큰은 호출한 곳에 반환합니다.
  */
+import { getAuthenticatedApiBaseUrl } from './apiSmoke';
 
 export interface LoginResult {
   user: {
@@ -27,11 +28,8 @@ export async function login(
   email: string,
   password: string,
 ): Promise<LoginResult> {
-  const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
-
-  if (!baseUrl) {
-    throw new Error('프론트 .env의 서버 주소를 확인해 주세요.');
-  }
+  // HTTP→HTTPS 리다이렉트 이전의 첫 요청에도 비밀번호가 포함되므로 먼저 주소를 검증합니다.
+  const baseUrl = getAuthenticatedApiBaseUrl();
 
   // 서버가 응답하지 않으면 15초 뒤 요청을 종료합니다.
   const controller = new AbortController();
@@ -85,8 +83,7 @@ export async function login(
 
 /** 기존 서버의 로그아웃 API로 세션을 폐기합니다. 연결 실패 시 화면에서 재시도를 안내합니다. */
 export async function logout(accessToken: string): Promise<void> {
-  const baseUrl = process.env.EXPO_PUBLIC_API_URL?.replace(/\/+$/, '');
-  if (!baseUrl) throw new Error('프론트 .env의 서버 주소를 확인해 주세요.');
+  const baseUrl = getAuthenticatedApiBaseUrl();
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {

@@ -1,4 +1,4 @@
-/** 홈 대시보드: 백엔드에서 받은 지역·단계 이름과 로컬 진행 상태를 조합해 학습 동선을 만듭니다. */
+/** 홈 대시보드: 학습 동선과 개발 중 실제 학습 이력 조회 화면의 진입점을 제공합니다. */
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
@@ -28,6 +28,8 @@ export default function HomeScreen() {
     <LearningContentState><HomeContent /></LearningContentState>
     <LinkRow title="오늘의 복습" subtitle="표시한 문제 확인하기" onPress={() => router.push('/review')} />
     <LinkRow title="학습 달력" subtitle="이번 달 일정 보기" onPress={() => router.push('/calendar')} />
+    {/* 로그인 후에도 개발용 조회 화면으로 돌아와 현재 세션을 검증할 수 있습니다. */}
+    {__DEV__ && <LinkRow title="API 연동 테스트" subtitle="서버 연결 · 실제 학습 이력 조회" onPress={() => router.push('/api-test')} />}
   </Screen>;
 }
 

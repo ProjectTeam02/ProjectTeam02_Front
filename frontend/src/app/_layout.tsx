@@ -1,4 +1,4 @@
-/** 공통 진입점: 글꼴·안전 영역·실제 인증·공통 학습 상태와 인증이 필요한 화면을 구성합니다. */
+/** 공통 진입점: 글꼴·인증·학습 상태와 개발용 읽기 API 확인 주소를 구성합니다. */
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -31,6 +31,7 @@ function AuthenticatedScreens() {
       <Stack.Screen name="signup" />
       <Stack.Screen name="reset-password" />
       <Stack.Screen name="jobs" />
+      <Stack.Screen name="api-test" />
       <Stack.Protected guard={!!session}>
         {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications', 'screens'].map((name) => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>

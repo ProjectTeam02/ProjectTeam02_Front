@@ -1,6 +1,6 @@
 /**
  * 4번 페이지의 큰 Leren 로고 초기 화면입니다.
- * 이메일 로그인은 기존 백엔드로 실제 인증합니다. 카카오·아이디 찾기는 아직 미연결입니다.
+ * 이메일 로그인은 기존 백엔드로 실제 인증합니다. 개발 중에는 읽기 전용 API 테스트 화면을 열 수 있습니다.
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -67,6 +67,8 @@ export default function WelcomeScreen() {
       </View>
       <Text style={styles.footer}>오늘의 경제 지식이 내일의 힘이 돼요.</Text>
       <Text style={styles.preview}>이메일 로그인은 실제 인증 · 학습 기록은 임시 저장입니다.</Text>
+      {/* 개발 빌드에서만 공개 상태와 로그인 세션의 읽기 API를 확인합니다. */}
+      {__DEV__ && <LerenButton title="API 연동 테스트 열기" variant="secondary" onPress={() => router.push('/api-test')} />}
     </Screen>
   );
 }
