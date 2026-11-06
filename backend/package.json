@@ -7,6 +7,11 @@
     "database"
   ],
   "scripts": {
+    "local:kakao:init": "node scripts/local-kakao.cjs init",
+    "local:kakao:status": "node scripts/local-kakao.cjs status",
+    "local:kakao:db": "node scripts/local-kakao.cjs db",
+    "local:kakao:start": "node scripts/local-kakao.cjs start",
+    "local:kakao:stop-db": "node scripts/local-kakao.cjs stop-db",
     "predev": "npm run db:build",
     "dev": "node --watch src/server.js",
     "prestart": "npm run db:build",
@@ -18,8 +23,7 @@
     "db:migrate:show": "npm run migration:show -w @leren/database",
     "db:check": "npm run migration:check -w @leren/database",
     "db:seed": "npm run seed -w @leren/database",
-    "db:test": "npm run test:db -w @leren/database",
-    "setup:local": "node scripts/setup-local-env.js"
+    "db:test": "npm run test:db -w @leren/database"
   },
   "dependencies": {
     "@leren/database": "0.4.0",

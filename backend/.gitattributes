@@ -1,0 +1,2 @@
+# Windows에서도 Docker가 실행하는 로컬 초기화 스크립트의 shebang을 유지합니다.
+scripts/local-kakao-init.sh text eol=lf

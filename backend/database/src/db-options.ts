@@ -4,7 +4,9 @@ import { PostgresConnectionOptions } from 'typeorm/driver/postgres/PostgresConne
 import { entities } from './entities';
 
 // 환경변수: database/.env → 레포 루트 .env 순서로 읽음 (이미 설정된 값이 있으면 그 값 우선, 운영은 Parameter Store 주입)
-config({ path: [resolve(__dirname, '../.env'), resolve(__dirname, '../../.env')] });
+// 로컬 카카오 실행 시에는 지정한 전용 파일만 사용해 다른 DB의 환경 파일을 섞지 않습니다.
+config({ path: process.env.LEREN_ENV_FILE ? [resolve(process.env.LEREN_ENV_FILE)]
+  : [resolve(__dirname, '../.env'), resolve(__dirname, '../../.env')] });
 
 export const baseOptions: PostgresConnectionOptions = {
   type: 'postgres',

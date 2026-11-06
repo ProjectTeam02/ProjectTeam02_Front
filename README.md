@@ -1,78 +1,13 @@
-# LEREN Frontend
+# LEREN Frontend — test
 
-**현재 test 브랜치는 프론트 + 백엔드 전체 실행 소스 + 첫 지역 학습 JSON을 함께 제공합니다. 설치·개인 환경 파일·DB/계정·실행·종료는 [테스트 방법](테스트%20방법.md)을 따라 주세요. 새 안내 Markdown은 이 파일 하나로 모았습니다.**
+`test` 브랜치는 Expo 프론트와 **함께 검증한 백엔드 소스**를 한 번에 내려받기 위한 구성입니다. `frontend/`에서 앱을, `backend/`에서 API와 로컬 Docker DB를 실행합니다.
 
-Expo SDK 58 + React Native + TypeScript로 만든 LEREN 프론트입니다. **develop은 일반 개발 코드**, **test는 develop에 백엔드·임시 JSON·테스트 구성을 더한 브랜치**로 사용합니다. 기존 test의 이력은 develop으로 이어받습니다.
+설치·실행은 [테스트 방법.md](테스트%20방법.md)를 따릅니다. 백엔드 동봉 원본은 [backend/SOURCE_COMMIT](backend/SOURCE_COMMIT)에 기록했습니다. 백엔드 저장소의 브랜치를 자동으로 추적하는 submodule이 아니라 이번 검증 버전의 소스 사본입니다.
 
-## 현재 구현 범위
+현재 실제 연결 범위는 이메일 가입/로그인/로그아웃, PC 웹 카카오 로그인, 회원 정보, 달력, 학습 이력, 학습 알림 켜기/끄기, 튜터 대화/사용량, 승인 문항 조회입니다. 실제 데이터가 없거나 DB/AI 의존성이 준비되지 않은 기능은 화면에서 구분합니다. 홈·마이페이지의 **API 연결 현황**에서 현재 계정의 조회 결과를 볼 수 있습니다.
 
-| 영역 | 구현한 내용 | 아직 연결하지 않은 부분 |
-| --- | --- | --- |
-| 계정 | 초기 화면, 실제 이메일 로그인·로그아웃, 메모리 세션, 학습/개인 화면 접근 제어 | 앱 회원가입·카카오·아이디 찾기·메일/비밀번호 재설정·자동 로그인·토큰 갱신 |
-| 홈·학습 | 홈·지역 지도·학습 단계·개념·퀴즈·결과·복습 화면, 공통 학습 모델/공급 함수 접점 | 정식 학습 API·문제 공급·서버 채점·진도/보상/복습 기록 저장 |
-| 개인 화면 | 마이페이지·달력/일정·통계·직업/의상·상점·프로필·알림 설정 화면 | 계정별 기록·구매·설정 저장·기기 알림 발송 |
-| 튜터 | 질문 입력·학습 맥락·자료 기반 예시 대화(test) | 실제 AI 답변·대화 이력·근거·사용량 API |
+일정 저장은 실제 학습 대상이 필요하고, 퀴즈 채점은 응시 시작 API가, AI 답변은 별도 AI 서비스가 필요합니다. 화면이나 요청 코드가 있다는 이유로 전체 기능 완료를 의미하지 않습니다. 개발용 학습·전투·꾸미기 시안에는 서버 기록과 구분되는 안내를 표시합니다.
 
-피그마 4번 페이지를 바탕으로 제품 화면 21개를 구현했습니다. 화면 UI는 `frontend/src/screens/`, 주소는 `frontend/src/app/`에서 관리합니다. 현재 화면이 있다는 것이 모든 서버 기능의 구현 완료를 의미하지 않습니다.
+개인 `.env`·카카오 키·JWT 비밀 값·DB 데이터·계정·`node_modules`·빌드 결과는 포함하지 않습니다. 새 PC는 `.env`와 DB를 새로 준비해야 합니다. 프론트의 `EXPO_PUBLIC_*`에는 공개 서버 주소만 넣습니다.
 
-일반 개발용 develop에는 더미 문제 JSON, `/api/v1/dev-learning/catalog` 호출, 예시 프로필/코인/일정/완료 기록, 화면 목록(Gallery), 강제 미리보기 상태를 포함하지 않습니다. 학습 공급 함수를 아직 연결하지 않아 학습 화면은 **학습 콘텐츠 연결 준비 중**을 표시합니다. 없는 스테이지나 API 주소를 임의로 만들지 않습니다. 홈·개인 화면·튜터의 기본 화면은 계속 확인할 수 있습니다. 이 test에는 별도 HTTP 어댑터와 초기값을 주입해 첫 지역 학습·퀴즈·복습, 예시 코인/튜터 대화, 화면 목록을 추가했습니다.
-
-## 폴더와 주요 파일
-
-```text
-ProjectTeam02_Front/
-├─ README.md
-├─ 테스트 방법.md
-├─ backend/                   # 이 test에 동봉한 인증·임시 학습·DB 구성
-├─ 프론트엔드_진행상황.md
-├─ 개발일지.md
-├─ 타입스크립트_전환기록.md
-└─ frontend/
-   ├─ index.js                 # expo-router/entry
-   ├─ App.tsx                  # 이전 import 호환
-   ├─ package.json / package-lock.json
-   ├─ app.json / AGENTS.md
-   └─ src/
-      ├─ app/                  # _layout.tsx·주소 파일
-      ├─ screens/              # auth·home·game·learning·mypage·tutor
-      ├─ components/           # common·game·ui
-      ├─ context/
-      │  ├─ AuthContext.tsx    # 실제 인증·메모리 토큰
-      │  ├─ LearningContentContext.tsx # 공급 함수·로딩/오류/미연결
-      │  └─ LearningProgressContext.tsx # 로컬 진행·설정 + test 초기값 주입
-      ├─ services/auth.ts      # 로그인/로그아웃 HTTP·응답 검증
-      ├─ services/devLearning.ts # test의 임시 학습 HTTP 어댑터
-      ├─ test-support/previewSeed.ts # test 예시 성장 초기값
-      ├─ services/learning.ts  # LearningCatalogLoader 타입
-      ├─ types/learning.ts     # 화면 모델(정식 공개 DTO 아님)
-      └─ constants/theme.ts    # 색상·간격·한글 글꼴
-```
-
-현재 버전은 expo ~58.0.19, react-native 0.88.0, react 19.3.0입니다. Router·Noto Sans KR·Pixelify Sans·웹 의존성을 SDK 58 조합에 추가했습니다. 버전 선언은 package.json, 실제 설치 버전은 package-lock.json, 앱 플러그인은 app.json이 관리합니다. SDK 58 업그레이드 자체는 앞선 커밋 이력에 있습니다.
-
-## 설치와 실행
-
-[테스트 방법.md](테스트%20방법.md)의 순서대로 진행합니다. backend의 `npm.cmd run setup:local`이 필요한 개인 환경 파일 두 개와 각 PC의 JWT 난수를 생성합니다. 기존 파일은 유지합니다. 동봉 backend에서 설치·Docker DB 초기 준비/마이그레이션·실행을 하고 frontend를 별도 터미널에서 실행합니다. 외부 카카오/OpenRouter 키는 현재 테스트에 필요 없습니다.
-
-프론트3001/백엔드3000을 사용합니다. 계정은 동봉한 독립 테스트 DB에서 Swagger로 한 번 생성합니다. 기존 별도 백엔드의 DB/계정은 자동 공유되지 않습니다. 휴대폰은 프론트 .env의 두 서버 주소를 현재 PC IPv4:3000으로 바꿉니다.
-
-## 저장과 종료
-
-사용자 이메일·닉네임은 실제 로그인 응답을 사용합니다. test의 레벨/EXP/840코인은 화면 확인용 초기값이며 실제 잔액·성장이 아닙니다. 코인·직업·일정·설정과 이후 화면 진행 변경은 메모리 상태이며 정식 저장 API가 아닙니다. 새로고침·앱 재시작·로그인/로그아웃 시 로컬 상태가 초기화됩니다. 토큰도 메모리에만 두어 재시작 후 다시 로그인합니다.
-
-프론트/백엔드는 각각 실행한 터미널에서 Ctrl+C로 종료합니다. `docker compose up -d db`로 켠 로컬 DB는 백엔드 폴더에서 `docker compose stop db`로 따로 중지합니다. 기존 DB 볼륨이 남아 있으면 가입 계정은 유지되어 재가입할 필요가 없습니다. 계정은 GitHub 코드와 함께 공유되지 않습니다.
-
-## 검사와 문서
-
-```powershell
-npm.cmd run typecheck
-npm.cmd run lint -- --no-cache
-```
-
-develop에서 상속한 공통 코드의 상태·화면 파일·커밋 단위는 [프론트 진행 상황](프론트엔드_진행상황.md), 날짜별 결과는 [개발일지](개발일지.md), 과거 TS/SDK 작업은 [전환 기록](타입스크립트_전환기록.md)을 확인합니다. 현재 test의 재현 절차와 검증 범위는 테스트 방법을 확인합니다. 과거 구성의 검증 결과와 이후 develop의 검증은 구분합니다.
-
-## 공유 규칙
-
-test에는 backend 폴더·더미 JSON·Gallery를 추가하고 새 Markdown은 테스트 방법.md 하나만 둡니다. develop의 일반 개발 이력은 그대로 상속합니다. 개인 .env·node_modules·.expo·dist·키·로그·DB 볼륨은 올리지 않습니다.
-
-팀 커밋 규칙상 모듈 설치는 build, 새 화면/동작은 feat, 문서/설명 주석은 docs, 자동 검증 코드는 test로 분류합니다. 한국어 설명 주석을 기본으로 작성하고 실제 API 연결/임시 로컬 상태/TODO를 구별합니다. frontend/AGENTS.md를 따릅니다.
+구조: `frontend/src/app/`는 Expo Router 주소, `frontend/src/screens/`는 화면, `frontend/src/services/`는 인증 및 API 요청, `frontend/src/context/`와 `src/hooks/`는 인증·조회 상태를 관리합니다. 기존 개발 기록과 코드 이력은 유지합니다.

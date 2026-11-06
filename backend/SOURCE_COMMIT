@@ -1,0 +1,4 @@
+repository=https://github.com/ProjectTeam02/ProjectTeam02_Back
+commit=14c13d77ccd5b9dae0d4952df3ed138539df29c5
+branch=codex/kakao-local-migration-20261106
+excluded=.git,.idea,untracked files,private environment,dependencies,builds,database volume

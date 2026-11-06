@@ -1,4 +1,10 @@
-require('dotenv').config();
+/**
+ * 환경변수 기본값 설정
+ * 백엔드 작업: 서버 실행에 필요한 환경변수의 기본값 관리
+ * 주의: Secret과 토큰 값은 파일에 하드코딩하지 않는다.
+ */
+// 로컬 카카오 실행기는 전용 파일을 명시해 기존 EC2/개발 DB 설정을 읽지 않게 합니다.
+require('dotenv').config(process.env.LEREN_ENV_FILE ? { path: process.env.LEREN_ENV_FILE } : {});
 
 module.exports = {
   nodeEnv: process.env.NODE_ENV || 'development',
@@ -12,4 +18,16 @@ module.exports = {
   fastapiInternalToken: process.env.FASTAPI_INTERNAL_TOKEN,
   fastapiTimeoutMs: Number(process.env.FASTAPI_TIMEOUT_MS || 5000),
   aiDailyLimit: Number(process.env.AI_DAILY_LIMIT || 20),
+  kakaoRestApiKey: process.env.KAKAO_REST_API_KEY,
+  kakaoClientSecret: process.env.KAKAO_CLIENT_SECRET,
+  kakaoAllowedRedirectUris: (process.env.KAKAO_ALLOWED_REDIRECT_URIS || '')
+    .split(',').map((uri) => uri.trim()).filter(Boolean),
+  kakaoOauthCallbackUrl: process.env.KAKAO_OAUTH_CALLBACK_URL,
+  kakaoAppDeepLink: process.env.KAKAO_APP_DEEP_LINK,
+  kakaoAllowedAppDeepLinks: (process.env.KAKAO_ALLOWED_APP_DEEP_LINKS || '')
+    .split(',').map((uri) => uri.trim()).filter(Boolean),
+  kakaoOauthStoreMode: process.env.KAKAO_OAUTH_STORE_MODE,
+  kakaoOauthStateTtlSeconds: Number(process.env.KAKAO_OAUTH_STATE_TTL_SECONDS || 300),
+  kakaoOauthExchangeTtlSeconds: Number(process.env.KAKAO_OAUTH_EXCHANGE_TTL_SECONDS || 60),
+  kakaoLegacyDirectLoginEnabled: process.env.KAKAO_LEGACY_DIRECT_LOGIN_ENABLED === 'true',
 };

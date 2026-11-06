@@ -1,3 +1,8 @@
+/**
+ * Express 애플리케이션 설정
+ * 백엔드 작업: 공통 미들웨어·라우터·Swagger 연결을 관리
+ * 주의: 비즈니스 로직은 기능별 Service에서 처리한다.
+ */
 const express = require('express');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
@@ -13,6 +18,7 @@ const app = express();
 
 const swaggerSpec = swaggerJsdoc(swaggerConfig);
 
+// Expo 웹의 다른 포트에서 보내는 JSON/Authorization 요청을 등록된 origin에만 허용합니다.
 app.use(corsMiddleware);
 app.use(express.json());
 
@@ -25,7 +31,7 @@ app.get('/health', (_req, res) => {
   res.json({ service: 'leren-backend', status: 'UP', timestamp: new Date().toISOString() });
 });
 
-// 개발에서만 임시 학습 JSON을 같은 3000번 서버로 제공합니다. 기존 인증·퀴즈 라우터는 유지합니다.
+// 기존 개발용 학습 JSON은 개발 환경에서만 같은 서버에 제공합니다.
 mountDevelopmentLearning(app);
 app.use('/api/v1', routes);
 app.use((_req, _res, next) => next(AppError.notFound('요청한 API를 찾을 수 없습니다.')));

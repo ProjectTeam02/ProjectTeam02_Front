@@ -1,0 +1,33 @@
+# EC2 compose와 분리한 PC 카카오 로그인 전용 DB입니다. 루프백 포트만 공개합니다.
+services:
+  db:
+    image: pgvector/pgvector:pg18
+    container_name: leren-kakao-local-20261106-db
+    labels:
+      leren.purpose: kakao-local-20261106
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: leren_kakao_local
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run local:kakao:init first}
+      DB_PASSWORD: ${DB_PASSWORD:?Run local:kakao:init first}
+      DB_MIGRATION_PASSWORD: ${DB_MIGRATION_PASSWORD:?Run local:kakao:init first}
+      DB_AI_PASSWORD: ${DB_AI_PASSWORD:?Run local:kakao:init first}
+      TZ: UTC
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - kakao_local_data:/var/lib/postgresql
+      - ./scripts/local-kakao-init.sh:/docker-entrypoint-initdb.d/00_create_roles.sh:ro
+      - ./database/sql/init/01_app_schema.sql:/docker-entrypoint-initdb.d/01_app_schema.sql:ro
+      - ./database/sql/init/02_ai_schema.sql:/docker-entrypoint-initdb.d/02_ai_schema.sql:ro
+      - ./database/sql/init/03_ai_tables.sql:/docker-entrypoint-initdb.d/03_ai_tables.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d leren_kakao_local"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+volumes:
+  kakao_local_data:
+    name: leren-kakao-local-20261106-data
+    labels:
+      leren.purpose: kakao-local-20261106

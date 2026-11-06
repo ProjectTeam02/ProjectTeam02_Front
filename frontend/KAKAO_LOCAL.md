@@ -1,6 +1,6 @@
 # 실제 작업 폴더에서 로컬 카카오 로그인
 
-실제 프로젝트는 C:\Leren\ProjectTeam02_Front 이며 인증·학습 서버 설정은 frontend/.env 한 곳에서 읽습니다. 예시 환경파일과 .env.local은 실행 설정으로 사용하지 않습니다.
+이 test 브랜치는 frontend/와 backend/를 함께 제공하며 인증·학습 서버 설정은 frontend/.env 한 곳에서 읽습니다. 예시 환경파일과 .env.local은 실행 설정으로 사용하지 않습니다.
 
 - EXPO_PUBLIC_API_URL=http://localhost:3000
 - EXPO_PUBLIC_LEARNING_API_URL=http://localhost:3000
@@ -12,7 +12,7 @@
 Docker Desktop을 켠 뒤 백엔드 터미널에서:
 
 ```powershell
-cd C:\Leren\ProjectTeam02_Back
+cd C:\Leren\ProjectTeam02_Front\backend
 npm.cmd run local:kakao:db
 npm.cmd run local:kakao:start
 ```

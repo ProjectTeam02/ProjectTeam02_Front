@@ -1,20 +1,20 @@
+/**
+ * 인증 비즈니스 로직
+ * 백엔드 작업: 유스케이스 흐름과 기존 정책을 유지
+ * 주의: DB는 Repository, 외부 통신은 Client를 사용한다.
+ */
 const crypto = require('node:crypto');
-const { User, UserGrowth, UserSetting } = require('@leren/database');
+const { User, UserGrowth, UserSetting, SocialAccount } = require('@leren/database');
 const { AppDataSource } = require('../../config/database');
 const env = require('../../config/env');
 const AppError = require('../../common/errors/AppError');
 const { hashPassword, verifyPassword } = require('../../common/utils/password.util');
 const { hashToken, issueAccessToken, issueRefreshToken, verifyRefreshToken } = require('../../common/utils/token.util');
 const sessionRepository = require('./repositories/session.repository');
+const authSchema = require('./auth.schema');
+const loginResponse = require('./dto/loginResponse.dto');
 
-function publicUser(user, growth = null) {
-  return {
-    userId: user.userId || user.id, nickname: user.nickname, email: user.email,
-    level: growth?.totalLevel ?? 1, totalExp: growth?.totalExp ?? 0,
-    economyLevel: growth?.economyLevel ?? 1, economyExp: growth?.economyExp ?? 0,
-    plan: user.plan || 'FREE',
-  };
-}
+const publicUser = (user, growth = null) => loginResponse.user(user, growth);
 
 function isUniqueViolation(error) { return error?.code === '23505' || error?.driverError?.code === '23505'; }
 
@@ -49,7 +49,7 @@ function service(dataSource = AppDataSource, kakaoClient = null) {
           if (await userRepo.findOneBy({ email })) throw AppError.conflict('이미 가입된 이메일입니다.');
           const user = await userRepo.save(userRepo.create({ email, nickname, passwordHash: hashPassword(password) }));
           await ensureUserRows(manager, user);
-          return { user: publicUser(user, await growthFor(user.userId, manager)), ...(await issueTokens(user, 'EMAIL', manager)) };
+          return loginResponse.session({ user, growth: await growthFor(user.userId, manager), issued: await issueTokens(user, 'EMAIL', manager) });
         });
       } catch (error) {
         if (error instanceof AppError) throw error;
@@ -64,7 +64,7 @@ function service(dataSource = AppDataSource, kakaoClient = null) {
       if (user.accountStatus !== 'ACTIVE') throw AppError.forbidden('정지된 계정입니다.');
       user.failedLoginCount = 0; user.lastLoginAt = new Date(); user.lastLoginMethod = 'EMAIL';
       await userRepo.save(user); await ensureUserRows(dataSource.manager, user);
-      return { user: publicUser(user, await growthFor(user.userId)), ...(await issueTokens(user, 'EMAIL')) };
+      return loginResponse.session({ user, growth: await growthFor(user.userId), issued: await issueTokens(user, 'EMAIL') });
     },
     async refresh(refreshToken) {
       let payload;
@@ -76,24 +76,98 @@ function service(dataSource = AppDataSource, kakaoClient = null) {
         const user = await manager.getRepository(User).findOneBy({ userId: payload.sub });
         if (!user || user.accountStatus !== 'ACTIVE') throw AppError.unauthorized();
         await ensureUserRows(manager, user);
-        return { user: publicUser(user, await growthFor(user.userId, manager)), ...(await issueTokens(user, 'EMAIL', manager)) };
+        return loginResponse.session({ user, growth: await growthFor(user.userId, manager), issued: await issueTokens(user, session.loginMethod || 'EMAIL', manager) });
       });
     },
     async logout(userId) { await sessions.revokeAll(userId); return { loggedOut: true }; },
-    async kakao(accessToken) {
-      if (!kakaoClient) throw AppError.unavailable('Kakao OAuth가 설정되지 않았습니다.');
-      const profile = await kakaoClient.getProfile(accessToken);
-      if (!profile?.id) throw AppError.unauthorized('Kakao 사용자 검증에 실패했습니다.');
-      const email = profile.kakao_account?.email || `kakao-${profile.id}@local.invalid`;
-      const nickname = profile.kakao_account?.profile?.nickname || `kakao-${profile.id}`;
+    async kakao(input) {
+      if (!['development', 'test'].includes(env.nodeEnv) || !env.kakaoLegacyDirectLoginEnabled) {
+        throw AppError.forbidden('카카오 로그인은 start/callback/exchange 흐름을 사용하세요.');
+      }
+      return this.prepareKakaoLogin(input, true);
+    },
+    async completeKakaoLogin({ userId, providerUserId, isNewUser }) {
       return transaction(async (manager) => {
         const userRepo = manager.getRepository(User);
-        let user = await userRepo.findOneBy({ email });
-        if (!user) user = await userRepo.save(userRepo.create({ email, nickname, lastLoginMethod: 'KAKAO' }));
-        else { user.nickname = nickname; user.lastLoginMethod = 'KAKAO'; user.lastLoginAt = new Date(); user = await userRepo.save(user); }
-        await ensureUserRows(manager, user);
-        return { user: publicUser(user, await growthFor(user.userId, manager)), ...(await issueTokens(user, 'KAKAO', manager)) };
+        const social = await manager.getRepository(SocialAccount).findOne({
+          where: { provider: 'KAKAO', providerUserId, userId }, lock: { mode: 'pessimistic_write' },
+        });
+        const user = await userRepo.findOne({
+          where: { userId }, lock: { mode: 'pessimistic_write' },
+        });
+        if (!social || social.disconnectedAt || !user || user.accountStatus !== 'ACTIVE') {
+          throw AppError.forbidden('로그인할 수 없는 계정입니다.');
+        }
+        user.failedLoginCount = 0;
+        user.lastLoginAt = new Date();
+        user.lastLoginMethod = 'KAKAO';
+        await userRepo.save(user);
+        return loginResponse.session({ user, growth: await growthFor(userId, manager), isNewUser,
+          issued: await issueTokens(user, 'KAKAO', manager) });
       });
+    },
+    async prepareKakaoLogin(input, issueSession = false) {
+      const { authorizationCode, redirectUri } = authSchema.kakao({ body: input }).body;
+      if (!kakaoClient) throw AppError.unavailable('Kakao OAuth가 설정되지 않았습니다.');
+      const token = await kakaoClient.getAccessToken(authorizationCode, redirectUri);
+      if (typeof token?.access_token !== 'string' || !token.access_token.trim()) {
+        throw AppError.unavailable('Kakao 토큰 발급 응답이 올바르지 않습니다.');
+      }
+      const profile = await kakaoClient.getProfile(token.access_token);
+      const id = profile?.id;
+      if (!((typeof id === 'number' && Number.isSafeInteger(id) && id > 0)
+        || (typeof id === 'string' && /^[1-9]\d*$/.test(id) && id.length <= 255))) {
+        throw AppError.unavailable('Kakao 사용자 검증에 실패했습니다.');
+      }
+      const providerUserId = String(id);
+      const providerEmail = typeof profile.kakao_account?.email === 'string'
+        ? profile.kakao_account.email.slice(0, 255) : null;
+      const providerNickname = typeof profile.kakao_account?.profile?.nickname === 'string'
+        ? profile.kakao_account.profile.nickname.trim().slice(0, 100) : null;
+
+      const persistLogin = () => transaction(async (manager) => {
+        const socialRepo = manager.getRepository(SocialAccount);
+        const userRepo = manager.getRepository(User);
+        let social = await socialRepo.findOne({
+          where: { provider: 'KAKAO', providerUserId }, lock: { mode: 'pessimistic_write' },
+        });
+        const isNewUser = !social;
+        let user;
+        if (social) {
+          if (social.disconnectedAt) throw AppError.forbidden('연결 해제된 소셜 계정입니다.');
+          user = await userRepo.findOne({ where: { userId: social.userId }, lock: { mode: 'pessimistic_write' } });
+          if (!user || user.accountStatus !== 'ACTIVE') throw AppError.forbidden('로그인할 수 없는 계정입니다.');
+        } else {
+          // 이메일은 계정 식별/자동 연결에 사용하지 않는다. 소셜 전용 회원의 이메일은 null이다.
+          user = await userRepo.save(userRepo.create({
+            email: null, passwordHash: null, nickname: (providerNickname || '카카오 사용자').slice(0, 30),
+            accountStatus: 'ACTIVE', lastLoginMethod: 'KAKAO',
+          }));
+          social = socialRepo.create({ provider: 'KAKAO', providerUserId, userId: user.userId });
+        }
+        if (issueSession) {
+          user.failedLoginCount = 0;
+          user.lastLoginAt = new Date();
+          user.lastLoginMethod = 'KAKAO';
+          await userRepo.save(user);
+        }
+        Object.assign(social, { providerEmail, providerNickname, lastUsedAt: new Date() });
+        await socialRepo.save(social);
+        await ensureUserRows(manager, user);
+        if (!issueSession) return { userId: user.userId, providerUserId, isNewUser };
+        return loginResponse.session({ user, growth: await growthFor(user.userId, manager), isNewUser,
+          issued: await issueTokens(user, 'KAKAO', manager) });
+      });
+      try {
+        return await persistLogin();
+      } catch (error) {
+        // 동시 최초 로그인 충돌은 롤백 후 DB 처리만 한 번 재실행한다. 인가 코드는 재사용하지 않는다.
+        if (isUniqueViolation(error)
+          && (error.constraint || error.driverError?.constraint) === 'social_accounts_provider_provider_user_id_idx') {
+          return persistLogin();
+        }
+        throw error;
+      }
     },
   };
 }
