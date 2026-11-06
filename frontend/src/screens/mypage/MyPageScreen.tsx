@@ -1,42 +1,23 @@
-/**
- * 피그마 19번 마이페이지입니다. 현재 영웅과 성장 요약을 보여주고 각 개인 화면으로 연결합니다.
- * 프로필·코인·진행도는 서버 대신 공통 LearningProgressContext를 읽어 다른 화면의 변경과 함께 갱신됩니다.
- */
-import { StyleSheet, Text, View } from 'react-native';
+/** 실제 회원·성장·지갑·장착 조회를 표시합니다. null은 예시 레벨이나 코인으로 바꾸지 않습니다. */
 import { router } from 'expo-router';
-import LerenCharacter from '../../components/common/LerenCharacter';
 import Screen from '../../components/ui/Screen';
-import { LinkRow, Row } from '../../components/ui/Primitives';
-import { useLearningProgress } from '../../context/LearningProgressContext';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
-import { costumeTitle, HEROES } from './heroCatalog';
-
+import { Body, Heading, LinkRow, Notice } from '../../components/ui/Primitives';
+import { ApiStatus } from '../../components/ui/ApiStatus';
+import { useBackendProfile } from '../../context/BackendProfileContext';
+import LerenCard from '../../components/common/LerenCard';
 export default function MyPageScreen() {
-  const { profile, completedSteps, equippedCostume } = useLearningProgress();
-  return (
-    <Screen title="마이페이지" back tabs>
-      <View style={styles.hero}>
-        <LerenCharacter source={HEROES[profile.job].image} size={64} accessibilityLabel={HEROES[profile.job].name} />
-        <Text style={styles.heading}>{profile.nickname} · {HEROES[profile.job].name}</Text>
-        <Text style={styles.description}>{costumeTitle(equippedCostume, profile.job)} 장착 · {profile.coins.toLocaleString()} 코인</Text>
-      </View>
-      <Row>
-        {[{ value: `Lv.${profile.level}`, label: '전체 레벨' }, { value: `Lv.${profile.economyLevel}`, label: '경제 레벨' }, { value: `${completedSteps.length}개`, label: '완료 단계' }].map(item => <View key={item.label} style={styles.stat}><Text style={styles.value}>{item.value}</Text><Text style={styles.micro}>{item.label}</Text></View>)}
-      </Row>
-      <LinkRow title="학습 통계" subtitle="학습률 · 개념별 정답률" onPress={() => router.push('/statistics')} />
-      <LinkRow title="학습 달력" subtitle="기록과 예정 일정" onPress={() => router.push('/calendar')} />
-      <LinkRow title="직업·보유 코스튬" subtitle="나의 영웅 꾸미기" onPress={() => router.push('/wardrobe')} />
-      <LinkRow title="코스튬 상점" subtitle="코인으로 꾸미기" onPress={() => router.push('/shop')} />
-      <LinkRow title="프로필·설정" subtitle="알림 · 계정 관리" onPress={() => router.push('/settings')} />
-    </Screen>
-  );
+  const profile = useBackendProfile(); const p = profile.data;
+  return <Screen title="마이페이지" back tabs>
+    <ApiStatus resource={profile} label="내 회원 정보" />
+    {p && <><Heading>{p.nickname}</Heading><Body muted>{p.email}</Body>
+      <LerenCard title={`전체 레벨 ${p.level ?? '데이터 없음'} · 경제 레벨 ${p.economyLevel ?? '데이터 없음'}`} description={`보유 코인 ${p.coinBalance?.toLocaleString() ?? '데이터 없음'} · 완료 단계 ${p.completedStageCount}개\n직업: ${p.characterClass?.name ?? '데이터 없음'}\n장착: ${p.equippedCostumes.map(c => c.name ?? '이름 없음').join(', ') || '장착 데이터 없음'}`} />
+      {(p.level === null || p.coinBalance === null || p.characterClass === null || p.equippedCostumes.length === 0) && <Notice>API는 연결되었습니다. 성장·지갑·직업·장착 중 실제 값이 없는 항목은 ‘데이터 없음’으로 표시합니다.</Notice>}
+    </>}
+    <LinkRow title="학습 통계·이력" subtitle="실제 서버 기록 조회" onPress={() => router.push('/statistics')} />
+    <LinkRow title="학습 달력" subtitle="기록과 예정 일정" onPress={() => router.push('/calendar')} />
+    <LinkRow title="직업·장착 코스튬" subtitle="서버에 저장된 현재 장착 조회" onPress={() => router.push('/wardrobe')} />
+    <LinkRow title="코스튬 상점" subtitle="구매 API 준비 중" onPress={() => router.push('/shop')} />
+    <LinkRow title="프로필·설정" subtitle="알림 · 계정 관리" onPress={() => router.push('/settings')} />
+    <LinkRow title="API 연결 현황" subtitle="연결 성공 · 데이터 없음 · 미연결 확인" onPress={() => router.push('/connections')} />
+  </Screen>;
 }
-
-const styles = StyleSheet.create({
-  hero: { backgroundColor: COLORS.soft, padding: 16, borderRadius: 16, gap: 10 },
-  heading: { ...TYPOGRAPHY.heading, color: COLORS.ink },
-  description: { ...TYPOGRAPHY.small, color: COLORS.muted },
-  stat: { flex: 1, padding: 12, borderRadius: 12, backgroundColor: COLORS.soft, gap: 6 },
-  value: { ...TYPOGRAPHY.heading, color: COLORS.primary },
-  micro: { ...TYPOGRAPHY.micro, color: COLORS.muted },
-});

@@ -27,7 +27,8 @@
     "typecheck": "tsc --noEmit",
     "test:kakao": "node --test scripts/kakao-local.test.mjs",
     "lint": "expo lint",
-    "test:signup": "node --test scripts/signup.test.mjs"
+    "test:signup": "node --test scripts/signup.test.mjs",
+    "test:api": "node --test scripts/backend-api.test.mjs"
   },
   "private": true,
   "devDependencies": {

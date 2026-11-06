@@ -1,6 +1,6 @@
 /**
  * 피그마 26번 설정 화면입니다. 각 설정으로 이동하고 로그아웃 확인 UI를 표시합니다.
- * 로그아웃은 기존 서버 세션을 폐기합니다. 학습·개인 설정은 아직 앱 메모리 예시입니다.
+ * 로그아웃은 기존 서버 세션을 폐기합니다. 학습 알림 저장과 프로필 조회는 실제 API를 사용합니다.
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -12,7 +12,7 @@ import { useLearningProgress } from '../../context/LearningProgressContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function SettingsScreen() {
-  const { profile, notifications, notificationTime } = useLearningProgress();
+  const { profile } = useLearningProgress();
   const [confirmLogout, setConfirmLogout] = useState(false);
   const { signOut } = useAuth();
   const [busy, setBusy] = useState(false);
@@ -30,9 +30,9 @@ export default function SettingsScreen() {
     <Screen title="설정" back tabs onBack={confirmLogout ? () => setConfirmLogout(false) : undefined}>
       <LerenCard title={`${profile.nickname}님의 학습 환경`} description="나에게 맞게 프로필과 알림을 설정해요." variant="info" />
       <LinkRow title="프로필 수정" subtitle="닉네임 · 이메일" onPress={() => router.push('/profile')} />
-      <LinkRow title="학습 알림" subtitle={notifications ? `매일 ${notificationTime}` : '알림 꺼짐'} onPress={() => router.push('/notifications')} />
-      <LinkRow title="비밀번호 재설정" subtitle="등록한 이메일로 안내" onPress={() => router.push('/reset-password')} />
-      <LerenCard title="나의 학습 기록" description="화면을 둘러보며 만든 학습과 성장 기록을 확인해요. 현재 변경 내용은 앱을 다시 시작하면 초기화돼요." variant="info" />
+      <LinkRow title="학습 알림" subtitle="켜기·끄기 서버 저장 · 현재값 조회는 준비 중" onPress={() => router.push('/notifications')} />
+      <LinkRow title="비밀번호 재설정" subtitle="본인 확인·재설정 API 준비 중" onPress={() => router.push('/reset-password')} />
+      <LerenCard title="나의 학습 기록" description="학습 이력과 달력은 서버 기록을 조회합니다. 개발용 학습 미리보기의 로컬 진행도는 정식 기록에 저장되지 않습니다." variant="info" />
       {confirmLogout ? (
         <LerenCard title="로그아웃할까요?" description="서버의 로그인 세션을 종료하고 임시 학습 기록을 초기화합니다.">
           <LerenButton title="로그아웃" loading={busy} disabled={busy} onPress={submitLogout} />
