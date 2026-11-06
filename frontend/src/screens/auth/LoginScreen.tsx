@@ -72,7 +72,7 @@ export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPa
       <LerenLinkCard title="비밀번호를 잊으셨나요?" subtitle="재설정" onPress={onResetPassword || (() => router.push('/reset-password'))} />
       <LerenButton title="카카오로 시작하기" variant="secondary" onPress={social} loading={socialBusy} disabled={busy} />
       <LerenLinkCard title="처음 오셨나요?" subtitle="회원가입" onPress={onSignup || (() => router.push('/signup'))} />
-      <Text style={styles.preview}>이메일 로그인은 실제 인증 · 회원가입 화면은 아직 미연결입니다.</Text>
+      <Text style={styles.preview}>이메일 회원가입과 로그인은 실제 백엔드로 처리합니다.</Text>
     </Screen>
   );
 }

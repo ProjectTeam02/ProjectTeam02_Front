@@ -26,7 +26,8 @@
     "web": "expo start --web --port 3001",
     "typecheck": "tsc --noEmit",
     "test:kakao": "node --test scripts/kakao-local.test.mjs",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "test:signup": "node --test scripts/signup.test.mjs"
   },
   "private": true,
   "devDependencies": {
