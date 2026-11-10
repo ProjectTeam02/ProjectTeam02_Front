@@ -1,113 +1,90 @@
-/**
- * 백엔드가 제공한 문제·정답·해설·전투 규칙으로 임시 퀴즈 화면을 구성합니다.
- * 현재 테스트 API는 정답도 내려주므로 채점·기록은 로컬 처리하며 운영 채점 API와 구분합니다.
- */
-import React, { useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+/** 응시 생성·복원과 서버 채점만 사용합니다. 제출 응답을 잃으면 같은 답·키로 재시도합니다. */
+import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import Screen from '../../components/ui/Screen';
-import { Body, Empty, Heading, LinkRow } from '../../components/ui/Primitives';
-import LearningContentState from '../../components/ui/LearningContentState';
+import { Body, Empty, Heading, Notice } from '../../components/ui/Primitives';
+import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
-import LerenCharacter from '../../components/common/LerenCharacter';
-import LerenCheck from '../../components/common/LerenCheck';
 import LerenOption from '../../components/common/LerenOption';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
-import { useLearningProgress } from '../../context/LearningProgressContext';
-import { useLearningContent } from '../../context/LearningContentContext';
-import type { LearningQuestion, LearningRegion } from '../../types/learning';
-
-const CHARACTERS = {
-  warrior: require('../../../assets/characters/leren_warrior.png'),
-  mage: require('../../../assets/characters/leren_mage.png'),
-  archer: require('../../../assets/characters/leren_archer.png'),
-};
+import { useBackendAction } from '../../hooks/useBackend';
+import { useLearningQuery } from '../../hooks/useLearningQuery';
+import { useBackendProfile } from '../../context/BackendProfileContext';
+import { attemptDecoder, isLearningId, LEARNING_PATHS, stageDetailDecoder, submissionDecoder, submissionKey, type Submission } from '../../services/learningApi';
 
 export default function QuizBattleScreen() {
-  return <LearningContentState title="퀴즈 전투"><QuizBattleContent /></LearningContentState>;
-}
-
-function QuizBattleContent() {
-  const params = useLocalSearchParams<{ step?: string; boss?: string }>();
-  const { regions, getRegionForStep, getBattleQuestions, battleRules } = useLearningContent();
-  const boss = params.boss === '1';
-  const stepId = params.step === undefined ? boss ? regions[0]?.boss.id : regions[0]?.lessons[0]?.id : params.step;
-  const region = stepId ? getRegionForStep(stepId) : undefined;
-  const questions = stepId ? getBattleQuestions(stepId, boss) : [];
-  const rule = battleRules?.[boss ? 'boss' : 'normal'];
-  if (!region || !stepId || !rule || questions.length === 0) return <Screen title="퀴즈 전투" back tabs><Empty title="아직 준비되지 않은 문제예요" description="백엔드에서 받은 학습 목록에서 다시 선택해 주세요." action="탐험 지도 보기" onPress={() => router.replace('/explore')} /></Screen>;
-  return <BattleRound key={`${stepId}-${boss ? 'boss' : 'normal'}`} stepId={stepId} boss={boss} region={region} questions={questions} maxHp={rule.hp} />;
-}
-
-function BattleRound({ stepId, boss, region, questions, maxHp }: { stepId: string; boss: boolean; region: LearningRegion; questions: LearningQuestion[]; maxHp: number }) {
-  const { profile, flaggedQuestionIds, toggleFlag, finishQuiz } = useLearningProgress();
-  const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState(false);
-  const [score, setScore] = useState(0);
-  const [wrong, setWrong] = useState<string[]>([]);
-  const submitted = useRef(false);
-  const resultSaved = useRef(false);
-  const question = questions[index];
-  const hp = Math.max(0, maxHp - score);
-  const correct = selected === question.answer;
-  const roundFinished = hp === 0 || index === questions.length - 1;
-
-  // 제출 즉시 잠가 한 문항을 여러 번 채점하지 않습니다. 끝난 문항만 결과 total에 포함합니다.
-  const submit = () => {
-    if (selected === null || submitted.current) return;
-    submitted.current = true;
-    const nextScore = score + (correct ? 1 : 0);
-    const nextWrong = correct ? wrong : [...wrong, question.id];
-    setScore(nextScore); setWrong(nextWrong);
-    // 마지막 문제도 해설과 헷갈림 체크를 읽을 수 있게 채점 화면을 먼저 표시합니다.
-    setFeedback(true);
+  const { stageId, attemptId } = useLocalSearchParams<{ stageId?: string; attemptId?: string }>();
+  const attempt = useLearningQuery(isLearningId(attemptId) ? LEARNING_PATHS.attempt(attemptId) : null, attemptDecoder);
+  const activeStageId = attempt.data?.stageId ?? stageId;
+  const stage = useLearningQuery(isLearningId(activeStageId) ? LEARNING_PATHS.stage(activeStageId) : null, stageDetailDecoder);
+  const action = useBackendAction();
+  const profile = useBackendProfile();
+  const [selection, setSelection] = useState<{ questionId: string; choiceId: string } | null>(null);
+  const [feedback, setFeedback] = useState<Submission | null>(null);
+  const [proof, setProof] = useState<{ attemptId: string; questionId: string; choiceId: string } | null>(null);
+  if ((attemptId !== undefined && !isLearningId(attemptId)) || (!attemptId && !isLearningId(stageId))) {
+    return <Screen title="퀴즈" tabs><Empty title="학습할 단계를 선택해 주세요" action="경제 탐험 보기" onPress={() => router.replace('/explore')} /></Screen>;
+  }
+  const openResult = (id: string) => router.replace({ pathname: '/result', params: { attemptId: id } });
+  const start = async () => {
+    if (!stage.data || !stage.data.isUnlocked || stage.data.stageType !== 'NORMAL') return;
+    const result = await action.run(LEARNING_PATHS.start(stage.data.stageId), attemptDecoder, 'POST');
+    if (result) router.replace({ pathname: '/quiz', params: { stageId: result.stageId, attemptId: result.attemptId } });
   };
-  const nextQuestion = () => {
-    if (roundFinished) {
-      if (resultSaved.current) return;
-      resultSaved.current = true;
-      finishQuiz({ stepId, boss, correct: score, total: index + 1, wrongQuestionIds: wrong });
-      router.replace('/result');
-      return;
+  const question = attempt.data?.currentQuestion;
+  const shownFeedback = feedback?.attemptId === attempt.data?.attemptId && feedback?.quizId === question?.id ? feedback : null;
+  const selected = selection?.questionId === question?.id ? selection?.choiceId : null;
+  const retryProof = proof?.attemptId === attempt.data?.attemptId && proof?.questionId === question?.id ? proof : null;
+  const submit = async () => {
+    if (!attempt.data || !question || shownFeedback || action.busy || (!selected && !retryProof)) return;
+    // 첫 전송의 답을 고정합니다. 통신 오류 뒤 다른 답으로 바뀌어 중복 키 충돌이 나지 않게 합니다.
+    const pending = retryProof ?? { attemptId: attempt.data.attemptId, questionId: question.id, choiceId: selected! };
+    setProof(pending);
+    const result = await action.run(LEARNING_PATHS.submit(pending.questionId), submissionDecoder, 'POST',
+      { choiceId: pending.choiceId, attemptId: pending.attemptId }, submissionKey(pending.attemptId, pending.questionId));
+    if (result) {
+      setFeedback(result); setProof(null);
+      if (result.status !== 'IN_PROGRESS') profile.reload();
     }
-    setIndex((old) => old + 1); setSelected(null); setFeedback(false); submitted.current = false;
   };
-
-  return <Screen title={feedback ? correct ? '정답이에요!' : '다시 기억해 봐요' : boss ? `${region.title} · 보스` : '퀴즈 전투'} back tabs>
-    <LerenCard>
-      <View style={styles.row}><Text style={styles.label}>{boss ? '보스 · 지식 골렘' : '선택 슬라임'}</Text><Text style={styles.hp}>HP {hp}/{maxHp}</Text></View>
-      <View style={styles.track}><View style={[styles.hpFill, { width: `${hp / maxHp * 100}%` }]} /></View>
-      <View style={styles.battle}>
-        <LerenCharacter source={CHARACTERS[profile.job]} size={64} />
-        <Text style={styles.versus}>VS</Text>
-        {/* 피그마의 픽셀 몬스터는 단순한 사각형 도형으로 구성되어 있습니다. */}
-        <View style={[styles.monster, boss && styles.boss]} accessibilityLabel={boss ? '지식 골렘' : '선택 슬라임'} accessible>
-          <View style={styles.eyes}><View style={styles.eye} /><View style={styles.eye} /></View><View style={styles.mouth} />
-        </View>
-      </View>
-      <Text style={styles.questionNumber}>문제 {index + 1} / {questions.length}{feedback ? ' · 채점 완료' : ''}</Text>
-    </LerenCard>
-    {feedback ? <>
-      <LerenCard title={`${correct ? '정답' : '정답은'} · ${question.choices[question.answer]}`} description={`${question.explanation}\n${correct ? '몬스터 HP가 1 줄었어요.' : '몬스터 HP는 그대로예요. 해설을 읽고 다시 기억해 봐요.'}`} variant={correct ? 'success' : 'error'} />
-      <LerenCheck checked={flaggedQuestionIds.includes(question.id)} onChange={() => toggleFlag(question.id)} title={`Q${index + 1} · ${question.concept} 헷갈림 체크`} description="정답·오답과 상관없이 이 문항을 복습에 모아요." />
-      <LerenButton title={roundFinished ? '결과 보기' : '다음 문제'} onPress={nextQuestion} />
-      <LinkRow title="해설을 더 쉽게 이해하기" subtitle="AI 튜터에게 질문" onPress={() => router.push({ pathname: '/tutor', params: { concept: question.concept } })} />
+  return <Screen title={stage.data?.title ?? '퀴즈 전투'} tabs>
+    {!attemptId ? <>
+      <ApiStatus resource={stage} label="퀴즈 단계" />
+      {stage.data && <>
+        <LerenCard title={stage.data.title} description={stage.data.description ?? undefined} />
+        {stage.data.stageType === 'NORMAL' ? <>
+          <Body>최대 {stage.data.maxQuestionCount}문제 · 몬스터 HP {stage.data.initialMonsterHp}</Body>
+          <LerenButton title="퀴즈 시작·이어하기" disabled={!stage.data.isUnlocked || action.busy} loading={action.busy} onPress={() => { void start(); }} />
+          {!stage.data.isUnlocked && <Notice>이전 단계 또는 선수 주제를 먼저 완료해 주세요.</Notice>}
+        </> : <Notice>현재는 일반 단계의 퀴즈만 지원합니다.</Notice>}
+      </>}
     </> : <>
-      <Heading>{question.question}</Heading>
-      {question.choices.map((choice, choiceIndex) => <LerenOption key={choice} number={choiceIndex + 1} title={choice} state={selected === choiceIndex ? 'selected' : 'default'} onPress={() => setSelected(choiceIndex)} />)}
-      <LerenButton title={selected === null ? '답을 선택해 주세요' : '답 제출하기'} disabled={selected === null} onPress={submit} />
-      <Body muted>{boss ? `보스 HP ${maxHp} · 최대 ${questions.length}문제. HP가 0이면 바로 클리어해요.` : `일반 HP ${maxHp} · 최대 ${questions.length}문제\n정답이면 적 HP −1 · 오답이면 유지해요.`}</Body>
+      <ApiStatus resource={attempt} label="나의 응시" />
+      {attempt.data && <>
+        <Body>{attempt.data.attemptNo}번째 도전 · 제출 {shownFeedback?.submittedCount ?? attempt.data.submittedCount}/{attempt.data.maxQuestionCount} · 남은 HP {shownFeedback?.hpAfter ?? attempt.data.hp}</Body>
+        {attempt.data.status !== 'IN_PROGRESS'
+          ? <LerenButton title="저장된 결과 보기" onPress={() => openResult(attempt.data!.attemptId)} />
+          : question && <>
+            <Heading>{question.title}</Heading>
+            {question.choices.map((choice, index) => <LerenOption key={choice.id} number={index + 1} title={choice.content}
+              state={selected === choice.id ? shownFeedback ? shownFeedback.isCorrect ? 'correct' : 'wrong' : 'selected' : 'default'}
+              disabled={action.busy || !!shownFeedback || !!retryProof}
+              onPress={() => setSelection({ questionId: question.id, choiceId: choice.id })} />)}
+            {shownFeedback ? <>
+              <Notice tone={shownFeedback.isCorrect ? 'success' : 'error'}>{shownFeedback.isCorrect ? '정답입니다.' : '오답입니다.'}</Notice>
+              <LerenCard title="해설" description={shownFeedback.explanation ?? '등록된 해설이 없습니다.'} />
+              <LerenButton title={shownFeedback.status === 'IN_PROGRESS' ? '다음 문제' : '저장된 결과 보기'} onPress={() => {
+                if (shownFeedback.status === 'IN_PROGRESS') attempt.reload(); else openResult(shownFeedback.attemptId);
+              }} />
+            </> : <>
+              <LerenButton title={retryProof ? '같은 답안 다시 전송' : '답 제출하기'} disabled={action.busy || (!selected && !retryProof)} loading={action.busy} onPress={() => { void submit(); }} />
+              {!!retryProof && <Notice>이 답안의 저장 여부가 아직 확인되지 않았습니다. 같은 답으로 재시도하거나 응시를 다시 조회해 주세요.</Notice>}
+              <LerenButton title="서버의 현재 응시 다시 조회" variant="secondary" disabled={action.busy} onPress={attempt.reload} />
+            </>}
+          </>}
+      </>}
     </>}
+    {!!action.error && <Notice tone="error">{action.error}</Notice>}
+    <Body muted>답안을 제출하면 서버가 채점하고 완료 여부와 보상을 저장합니다.</Body>
   </Screen>;
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, label: { ...TYPOGRAPHY.label, color: COLORS.ink },
-  hp: { ...TYPOGRAPHY.small, color: COLORS.danger }, track: { height: 8, width: '100%', borderRadius: 4, backgroundColor: COLORS.disabled, overflow: 'hidden' },
-  hpFill: { height: 8, borderRadius: 4, backgroundColor: COLORS.danger }, battle: { flexDirection: 'row', alignItems: 'center', gap: 24, marginVertical: 2 },
-  versus: { ...TYPOGRAPHY.label, color: COLORS.muted, width: 56 }, questionNumber: { ...TYPOGRAPHY.small, color: COLORS.primary },
-  monster: { width: 48, height: 48, backgroundColor: '#248565', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  boss: { backgroundColor: '#68778E', width: 56, height: 56 }, eyes: { flexDirection: 'row', gap: 16 }, eye: { width: 8, height: 8, backgroundColor: '#FFFFFF' }, mouth: { width: 16, height: 6, backgroundColor: '#182842' },
-});

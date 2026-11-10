@@ -2,4 +2,4 @@
 import { router } from 'expo-router';
 import Screen from '../components/ui/Screen';
 import { Empty } from '../components/ui/Primitives';
-export default function NotFoundScreen() { return <Screen title="화면을 찾지 못했어요"><Empty title="다시 모험을 시작해 볼까요?" description="화면 목록에서 원하는 화면을 열어 주세요." action="화면 목록" onPress={() => router.replace('/screens')} /></Screen>; }
+export default function NotFoundScreen() { return <Screen title="화면을 찾지 못했어요"><Empty title="다시 모험을 시작해 볼까요?" description="시작 화면에서 다시 이동해 주세요." action="시작 화면" onPress={() => router.replace('/')} /></Screen>; }

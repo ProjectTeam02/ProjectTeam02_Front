@@ -1,8 +1,8 @@
 /**
- * 회원가입 폼과 가입 완료 화면입니다.
- * 입력 검증 후 닉네임만 미리보기 상태에 반영하며 비밀번호·계정은 저장하지 않습니다.
+ * 앱 입력값을 실제 회원가입 API로 보내고 서버의 가입 성공 후에만 완료 화면을 엽니다.
+ * 가입 뒤에는 로그인 화면으로 안내하며 비밀번호와 응답 토큰을 앱에 저장하지 않습니다.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { Text, StyleSheet } from 'react-native';
 import Screen from '../../components/ui/Screen';
@@ -11,75 +11,74 @@ import LerenInput from '../../components/common/LerenInput';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
 import LerenLinkCard from '../../components/common/LerenLinkCard';
-import { useLearningProgress } from '../../context/LearningProgressContext';
+import { signup, type SignupValues, type SignupAccount } from '../../services/signup';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 
-export interface SignupValues { email: string; password: string; nickname: string }
-export interface SignupResult { success?: boolean; message?: string; code?: string }
+export type { SignupValues } from '../../services/signup';
+export type SignupResult = SignupAccount;
 export interface SignupScreenProps {
-  onSignup?: (values: SignupValues) => SignupResult | false | void | Promise<SignupResult | false | void>;
+  onSignup?: (values: SignupValues) => Promise<SignupAccount>;
   onBack?: () => void;
   onLogin?: () => void;
-  onChooseJob?: () => void;
 }
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL = /^\S+@\S+\.\S+$/;
 
-export default function SignupScreen({ onSignup, onLogin, onChooseJob }: SignupScreenProps = {}) {
-  const { setNickname } = useLearningProgress();
+export default function SignupScreen({ onSignup, onLogin }: SignupScreenProps = {}) {
+  const pending = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [nickname, changeNickname] = useState('');
-  const [status, setStatus] = useState('empty');
+  const [created, setCreated] = useState<SignupAccount | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const emailError = email.length > 0 && !EMAIL.test(email.trim()) ? '이메일 형식을 확인해 주세요' : '';
-  const passwordError = password.length > 0 && password.length < 8 ? '비밀번호를 8자 이상 입력해 주세요' : '';
+  const normalizedEmail = email.trim();
+  const nicknameLength = [...nickname.trim()].length;
+  const emailValid = EMAIL.test(normalizedEmail) && normalizedEmail.length <= 255;
+  const passwordValid = password.trim().length >= 8 && password.length <= 128;
+  const nicknameValid = nicknameLength >= 1 && nicknameLength <= 30;
   const mismatch = confirm.length > 0 && confirm !== password;
-  const nicknameError = nickname.length > 0 && (nickname.trim().length < 2 || nickname.trim().length > 12) ? '닉네임은 2~12자로 입력해 주세요' : '';
-  // UI 확인용 검증입니다. 실제 계정·중복·비밀번호 정책은 서버 연동 시 계약에 맞춥니다.
-  const ready = EMAIL.test(email.trim()) && password.length >= 8 && password === confirm && nickname.trim().length >= 2 && nickname.trim().length <= 12;
+  const ready = emailValid && passwordValid && password === confirm && nicknameValid;
+  const goToLogin = onLogin || (() => router.replace('/login'));
 
+  /** 연속 탭으로 가입을 중복 요청하지 않고, 실제 서버가 만든 회원만 완료 상태에 반영합니다. */
   const submit = async () => {
-    if (!ready || busy) return;
-    setBusy(true);
-    setError('');
+    if (!ready || pending.current) return;
+    pending.current = true;
+    setBusy(true); setError('');
     try {
-      const result = onSignup ? await onSignup({ email: email.trim(), password, nickname: nickname.trim() }) : undefined;
-      if (result === false || (result && result.success === false)) throw new Error('signup');
-      setNickname(nickname.trim());
-      setPassword('');
-      setConfirm('');
-      setStatus('success');
-    } catch {
-      setError('계정을 만들지 못했어요. 입력값을 확인하고 다시 시도해 주세요.');
-    } finally { setBusy(false); }
+      const result = await (onSignup || signup)({ email: normalizedEmail, password,
+        passwordConfirm: confirm, nickname: nickname.trim() });
+      if (!result || !result.userId || !result.nickname) throw new Error('서버의 회원가입 결과를 확인하지 못했어요.');
+      setPassword(''); setConfirm('');
+      setCreated(result);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : '계정을 만들지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
   };
 
-  if (status === 'success') return (
+  if (created) return (
     <Screen title="가입 완료">
-      <LerenCard title={`${nickname || '모험가'}님, LEREN에 오신 걸 환영해요!`} description="경제를 배우는 모험을 함께 시작해요." variant="success" />
-      <LerenCard title="이제 영웅을 선택해 주세요" description="검사·마법사·궁수 중 함께할 직업을 고를 수 있어요." variant="info" />
-      <LerenButton title="직업 선택하기" onPress={onChooseJob || (() => router.push('/jobs'))} />
-      <Text style={styles.hint}>직업은 나중에 마이페이지에서도 바꿀 수 있어요.</Text>
-      <Text style={styles.preview}>화면 미리보기 · 실제 계정은 생성되지 않아요.</Text>
+      <LerenCard title={`${created.nickname}님, LEREN에 오신 걸 환영해요!`} description="서버에 회원가입이 완료됐어요. 가입한 이메일과 비밀번호로 로그인해 주세요." variant="success" />
+      <LerenButton title="로그인하기" onPress={goToLogin} />
+      <Text style={styles.hint}>입력한 비밀번호는 이 화면에 저장하지 않아요.</Text>
     </Screen>
   );
 
   return (
     <Screen title="회원가입">
-      <LerenInput label="이메일" value={email} onChangeText={(value) => { setEmail(value); setError(''); }} placeholder="이메일을 입력해 주세요" keyboardType="email-address" autoComplete="email" error={error || emailError} editable={!busy} />
-      <LerenInput label="비밀번호" value={password} onChangeText={setPassword} placeholder="비밀번호를 입력해 주세요" secure autoComplete="new-password" error={passwordError} editable={!busy} />
-      <LerenInput label="비밀번호 확인" value={confirm} onChangeText={setConfirm} placeholder="비밀번호를 다시 입력해 주세요" secure autoComplete="new-password" error={mismatch ? '비밀번호가 일치하지 않아요' : ''} editable={!busy} />
-      <LerenInput label="닉네임" value={nickname} onChangeText={changeNickname} placeholder="닉네임을 입력해 주세요" hint="모험에서 사용할 이름이에요" error={nicknameError} editable={!busy} />
-      {status === 'pending' && <Notice>계정을 만드는 중이에요. 이 화면은 처리 상태 미리보기입니다.</Notice>}
-      <LerenButton title={busy ? '계정을 만드는 중...' : '계정 만들기'} disabled={!ready} loading={busy} onPress={submit} />
-      <LerenLinkCard title="이미 계정이 있나요?" subtitle="로그인" onPress={onLogin || (() => router.replace('/login'))} />
-      <Text style={styles.preview}>화면 미리보기 · 입력값은 서버로 전송하지 않아요.</Text>
+      <LerenInput label="이메일" value={email} onChangeText={value => { setEmail(value); setError(''); }} placeholder="이메일을 입력해 주세요" keyboardType="email-address" autoComplete="email" error={email.length > 0 && !emailValid ? '255자 이내의 이메일을 입력해 주세요' : ''} editable={!busy} />
+      <LerenInput label="비밀번호" value={password} onChangeText={value => { setPassword(value); setError(''); }} placeholder="비밀번호를 입력해 주세요" secure autoComplete="new-password" error={password.length > 0 && !passwordValid ? '비밀번호를 8~128자로 입력해 주세요' : ''} editable={!busy} />
+      <LerenInput label="비밀번호 확인" value={confirm} onChangeText={value => { setConfirm(value); setError(''); }} placeholder="비밀번호를 다시 입력해 주세요" secure autoComplete="new-password" error={mismatch ? '비밀번호가 일치하지 않아요' : ''} editable={!busy} />
+      <LerenInput label="닉네임" value={nickname} onChangeText={value => { changeNickname(value); setError(''); }} placeholder="닉네임을 입력해 주세요" hint="모험에서 사용할 이름이에요. 1~30자로 입력해 주세요." error={nickname.length > 0 && !nicknameValid ? '닉네임을 1~30자로 입력해 주세요' : ''} editable={!busy} />
+      {!!error && <Notice tone="error">{error}</Notice>}
+      <LerenButton title={busy ? '계정을 만드는 중...' : '계정 만들기'} disabled={!ready || busy} loading={busy} onPress={() => { void submit(); }} />
+      <LerenLinkCard title="이미 계정이 있나요?" subtitle="로그인" onPress={goToLogin} />
+      <Text style={styles.hint}>회원가입 정보는 설정된 백엔드로 전송되며, 서버 처리 후 가입 결과를 알려드려요.</Text>
     </Screen>
   );
 }
-const styles = StyleSheet.create({
-  hint: { ...TYPOGRAPHY.small, color: COLORS.muted },
-  preview: { ...TYPOGRAPHY.micro, color: COLORS.muted, marginTop: 8 },
-});
+const styles = StyleSheet.create({ hint: { ...TYPOGRAPHY.micro, color: COLORS.muted, marginTop: 8 } });

@@ -1,50 +1,44 @@
-/** 백엔드에서 받은 개념·사례·핵심 정리를 표시하고 같은 학습 ID의 퀴즈로 연결합니다. */
-import React, { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+/** Stage에 연결된 공개 개념과 정렬된 학습 카드를 실제 API로 조회합니다. */
+import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import Screen from '../../components/ui/Screen';
-import { Empty, LinkRow, Progress } from '../../components/ui/Primitives';
-import LearningContentState from '../../components/ui/LearningContentState';
-import LerenButton from '../../components/common/LerenButton';
+import { Body, Empty, Heading, LinkRow, Notice } from '../../components/ui/Primitives';
+import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenCard from '../../components/common/LerenCard';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
-import { useLearningContent } from '../../context/LearningContentContext';
-import type { LearningLesson, LearningRegion } from '../../types/learning';
+import LerenButton from '../../components/common/LerenButton';
+import { useLearningQuery } from '../../hooks/useLearningQuery';
+import { conceptDecoder, isLearningId, LEARNING_PATHS, stageDetailDecoder, type StageDetail } from '../../services/learningApi';
 
 export default function MicroLearningScreen() {
-  return <LearningContentState title="마이크로러닝"><MicroLearningContent /></LearningContentState>;
-}
-
-function MicroLearningContent() {
-  const params = useLocalSearchParams<{ step?: string }>();
-  const { regions, getLesson } = useLearningContent();
-  const stepId = params.step === undefined ? regions[0]?.lessons[0]?.id : params.step;
-  const record = stepId ? getLesson(stepId) : undefined;
-  if (!record) return <Screen title="학습" back tabs><Empty title="아직 준비되지 않은 학습이에요" description="다른 단계의 내용을 대신 표시하지 않아요. 제공된 스테이지에서 학습을 선택해 주세요." action="탐험 지도 보기" onPress={() => router.replace('/explore')} /></Screen>;
-  return <LessonCards key={record.lesson.id} lesson={record.lesson} region={record.region} />;
-}
-
-function LessonCards({ lesson, region }: { lesson: LearningLesson; region: LearningRegion }) {
-  const [summary, setSummary] = useState(false);
-
-  return <Screen title={summary ? '핵심 정리' : lesson.title} back tabs>
-    <View style={styles.progress}><View style={styles.row}><Text style={styles.label}>{region.title} · {lesson.id}</Text><Text style={styles.small}>{summary ? '3' : '1'} / 3 · 약 3분</Text></View><Progress value={summary ? 1 : 1 / 3} /></View>
-    {summary ? <>
-      <LerenCard title="이것만 기억해도 좋아요" variant="info">{lesson.summary.map((line, index) => <Text key={line} style={styles.body}>{index + 1}. {line}</Text>)}</LerenCard>
-      <LerenCard title="이제 퀴즈로 확인해 볼까요?" description="정답을 맞히면 몬스터의 HP가 줄어들어요. 배운 내용을 떠올리며 도전해 보세요." variant="reward" />
-      <LerenButton title="퀴즈 전투 시작하기" onPress={() => router.push({ pathname: '/quiz', params: { step: lesson.id, boss: '0' } })} />
-      <LerenButton title="학습 내용 다시 보기" variant="secondary" onPress={() => setSummary(false)} />
-    </> : <>
-      <LerenCard title={lesson.introTitle} description={lesson.intro} variant="info" />
-      <LerenCard title={lesson.conceptTitle} description={lesson.concept} variant="info" />
-      <LerenCard title="생활 속 예시" description={lesson.example} variant="reward" />
-      <LerenButton title="핵심 정리 보기" onPress={() => setSummary(true)} />
-    </>}
-    <LinkRow title="헷갈리는 개념이 있나요?" subtitle="AI 튜터에게 질문" onPress={() => router.push({ pathname: '/tutor', params: { concept: lesson.title } })} />
+  const { stageId } = useLocalSearchParams<{ stageId?: string }>();
+  const stage = useLearningQuery(isLearningId(stageId) ? LEARNING_PATHS.stage(stageId) : null, stageDetailDecoder);
+  if (!isLearningId(stageId)) return <Screen title="학습" tabs><Empty title="학습 단계를 선택해 주세요" action="경제 탐험 보기" onPress={() => router.replace('/explore')} /></Screen>;
+  return <Screen title={stage.data?.title ?? '학습 내용'} tabs>
+    <ApiStatus resource={stage} label="학습 내용" />
+    {stage.data && (stage.data.isUnlocked
+      ? <ConceptCards key={stage.data.stageId} stage={stage.data} />
+      : <Notice>이전 단계 또는 선수 주제를 먼저 완료해 주세요.</Notice>)}
   </Screen>;
 }
 
-const styles = StyleSheet.create({
-  progress: { gap: 7 }, row: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
-  label: { ...TYPOGRAPHY.label, color: COLORS.ink }, small: { ...TYPOGRAPHY.small, color: COLORS.muted }, body: { ...TYPOGRAPHY.body, color: COLORS.ink },
-});
+function ConceptCards({ stage }: { stage: StageDetail }) {
+  const [selectedId, setSelectedId] = useState(stage.concepts[0]?.conceptId ?? null);
+  const concept = useLearningQuery(selectedId ? LEARNING_PATHS.concept(selectedId) : null, conceptDecoder);
+  return <>
+    {stage.description && <Body>{stage.description}</Body>}
+    {stage.concepts.length === 0 && <Notice>이 단계에 공개된 학습 개념이 없습니다.</Notice>}
+    {stage.concepts.map(item => <LinkRow key={item.conceptId} title={`${item.conceptId === selectedId ? '선택됨 · ' : ''}${item.title}`} subtitle={item.shortDefinition ?? undefined} onPress={() => setSelectedId(item.conceptId)} />)}
+    {selectedId && <ApiStatus resource={concept} label="개념 카드" empty={concept.data?.cards.length === 0} />}
+    {concept.data && <>
+      <Heading>{concept.data.title}</Heading>
+      {concept.data.shortDefinition && <LerenCard title="개념" description={concept.data.shortDefinition} variant="info" />}
+      {concept.data.cards.map(card => <LerenCard key={card.sectionId} title={card.title ?? `학습 카드 ${card.pageNo}`} description={card.body} />)}
+      {concept.data.summary && <LerenCard title="핵심 정리" description={concept.data.summary} variant="reward" />}
+      <LinkRow title="AI 튜터에게 질문" subtitle="실제 질문 전송은 별도 활성화가 필요합니다." onPress={() => router.push({ pathname: '/tutor', params: { concept: concept.data!.title } })} />
+    </>}
+    {stage.stageType === 'NORMAL'
+      ? <LerenButton title="퀴즈 시작 화면으로" onPress={() => router.push({ pathname: '/quiz', params: { stageId: stage.stageId } })} />
+      : <Notice>보스 응시는 아직 지원하지 않습니다.</Notice>}
+    <LerenButton title="학습 단계 목록" variant="secondary" onPress={() => router.replace({ pathname: '/steps', params: { topicId: stage.topicId } })} />
+  </>;
+}

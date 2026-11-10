@@ -1,6 +1,6 @@
 /**
  * 검사·마법사·궁수의 미리보기와 선택 화면입니다.
- * 기본 저장은 LearningProgressContext 안에서만 반영하며 API 저장은 선택 콜백을 따로 연결해야 합니다.
+ * 저장 콜백이 연결되기 전에는 선택 미리보기만 제공하고 완료 이동을 막습니다.
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
@@ -10,7 +10,6 @@ import Screen from '../../components/ui/Screen';
 import LerenCharacter from '../../components/common/LerenCharacter';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
-import { useLearningProgress } from '../../context/LearningProgressContext';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 
 export type JobId = 'warrior' | 'mage' | 'archer';
@@ -26,7 +25,6 @@ const JOBS: { id: JobId; name: string; description: string; image: ImageSourcePr
   { id: 'archer', name: '궁수', description: '집중과 통찰로 길을 찾는 영웅', image: require('../../../assets/characters/leren_archer.png') },
 ];
 export default function JobSelectionScreen({ onSaveJob, onComplete }: JobSelectionScreenProps = {}) {
-  const { setJob } = useLearningProgress();
   const { width } = useWindowDimensions();
   // 390px 기준 이미지 88px를 유지하고 작은 기기에서는 카드 안에 맞춰 비율을 줄입니다.
   const imageSize = Math.max(40, Math.min(88, (Math.min(width, 440) - 48 - 24) / 3 - 18));
@@ -36,12 +34,11 @@ export default function JobSelectionScreen({ onSaveJob, onComplete }: JobSelecti
   const selected = JOBS.find((job) => job.id === selection);
   // 선택만으로 저장하지 않고 시작 버튼에서 반영하여, 뒤로 나가도 기존 직업을 유지합니다.
   const submit = async () => {
-    if (!selection || busy) return;
+    if (!selection || busy || !onSaveJob) return;
     setBusy(true);
     setError(false);
     try {
       if (onSaveJob && !(await onSaveJob(selection)).success) throw new Error('save');
-      setJob(selection);
       if (onComplete) onComplete(selection);
       else router.replace('/home');
     } catch { setError(true); }
@@ -64,9 +61,9 @@ export default function JobSelectionScreen({ onSaveJob, onComplete }: JobSelecti
         <Text style={styles.hint}>{selected.description}</Text>
       </LerenCard>}
       {error && <LerenCard title="선택을 저장하지 못했어요" description={`연결 상태를 확인하고 다시 시도해 주세요.\n선택한 ${selected?.name || '직업'}는 그대로 유지했어요.`} variant="error" />}
-      <LerenButton title={error ? '다시 저장하고 시작' : selected ? `${selected.name}로 모험 시작` : '직업을 선택해 주세요'} disabled={!selected} loading={busy} onPress={submit} />
+      <LerenButton title={!onSaveJob ? '직업 저장 준비 중' : error ? '다시 저장하고 시작' : selected ? `${selected.name}로 모험 시작` : '직업을 선택해 주세요'} disabled={!selected || !onSaveJob} loading={busy} onPress={submit} />
       {error && <LerenButton title="직업 다시 고르기" variant="secondary" onPress={() => { setSelection(null); setError(false); }} />}
-      <Text style={styles.hint}>{selected ? '직업을 골라도 학습 경로와 완료 조건은 같아요.' : '직업은 나중에 마이페이지에서 바꿀 수 있어요.'}</Text>
+      <Text style={styles.hint}>{selected ? '직업을 골라도 학습 경로와 완료 조건은 같아요.' : '직업 변경 기능은 아직 연결되지 않았어요.'}</Text>
     </Screen>
   );
 }

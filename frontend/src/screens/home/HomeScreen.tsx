@@ -1,63 +1,19 @@
-/** 홈 대시보드: 백엔드에서 받은 지역·단계 이름과 로컬 진행 상태를 조합해 학습 동선을 만듭니다. */
+/** 홈 요약은 실제 회원 응답만 사용하며, 정식 API와 개발용 학습 자료를 명확히 구분합니다. */
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
-import { Body, Heading, LinkRow, Progress, Row } from '../../components/ui/Primitives';
-import LearningContentState from '../../components/ui/LearningContentState';
+import { Body, Heading, LinkRow, Notice } from '../../components/ui/Primitives';
+import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenCard from '../../components/common/LerenCard';
-import LerenButton from '../../components/common/LerenButton';
-import LerenCharacter from '../../components/common/LerenCharacter';
-import { useLearningProgress } from '../../context/LearningProgressContext';
-import { useLearningContent } from '../../context/LearningContentContext';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
-
-const IMAGES = {
-  warrior: require('../../../assets/characters/leren_warrior.png'),
-  mage: require('../../../assets/characters/leren_mage.png'),
-  archer: require('../../../assets/characters/leren_archer.png'),
-};
-const JOB_NAMES = { warrior: '검사', mage: '마법사', archer: '궁수' };
+import { useBackendProfile } from '../../context/BackendProfileContext';
 export default function HomeScreen() {
-  const { profile } = useLearningProgress();
+  const profile = useBackendProfile(); const p = profile.data;
   return <Screen title="홈" back={false} tabs>
-    <LerenCard variant="info" style={s.hero}>
-      <LerenCharacter source={IMAGES[profile.job]} size={64} accessibilityLabel={JOB_NAMES[profile.job]} />
-      <Heading>{profile.nickname}님, 오늘도 한 걸음!</Heading>
-      <Body muted style={s.small}>{JOB_NAMES[profile.job]} Lv.{profile.level} · 경제 Lv.{profile.economyLevel}</Body>
-    </LerenCard>
-    <LearningContentState><HomeContent /></LearningContentState>
-    <LinkRow title="오늘의 복습" subtitle="표시한 문제 확인하기" onPress={() => router.push('/review')} />
-    <LinkRow title="학습 달력" subtitle="이번 달 일정 보기" onPress={() => router.push('/calendar')} />
+    <ApiStatus resource={profile} label="내 회원 정보" />
+    {p && <LerenCard variant="info"><Heading>{p.nickname}님, 오늘도 한 걸음!</Heading><Body>전체 레벨 {p.level ?? '데이터 없음'} · 경제 레벨 {p.economyLevel ?? '데이터 없음'}</Body><Body>완료 단계 {p.completedStageCount}개 · 보유 코인 {p.coinBalance?.toLocaleString() ?? '데이터 없음'}</Body><Body muted>직업: {p.characterClass?.name ?? '데이터 없음'}</Body></LerenCard>}
+    <LinkRow title="경제 학습 시작하기" subtitle="주제·학습 내용·퀴즈" onPress={() => router.push('/explore')} />
+    <LinkRow title="학습 통계·이력" subtitle="서버에 저장된 나의 기록" onPress={() => router.push('/statistics')} />
+    <LinkRow title="학습 달력" subtitle="서버 기록·일정 조회" onPress={() => router.push('/calendar')} />
+    <LinkRow title="API 연결 현황" subtitle="연결 결과와 준비 중인 기능" onPress={() => router.push('/connections')} />
+    <Notice>학습 완료와 보상은 서버가 채점한 결과를 사용합니다. 복습 화면은 별도 미리보기입니다.</Notice>
   </Screen>;
 }
-
-// API가 준비된 뒤에만 학습 내용을 렌더해 오류 시 임의의 지역을 대신 보여주지 않습니다.
-function HomeContent() {
-  const { profile, completedSteps, wrongQuestionIds, flaggedQuestionIds } = useLearningProgress();
-  const { regions, getQuestion } = useLearningContent();
-  const region = regions.find(item => !completedSteps.includes(item.boss.id)) || regions[0];
-  if (!region) return null;
-  const stepIds = [...region.lessons.map(lesson => lesson.id), region.boss.id];
-  const count = stepIds.filter(id => completedSteps.includes(id)).length;
-  const nextLesson = region.lessons.find(lesson => !completedSteps.includes(lesson.id));
-  const step = nextLesson?.id || region.boss.id;
-  const complete = count === stepIds.length;
-  const reviewQuestions = [...new Set([...wrongQuestionIds, ...flaggedQuestionIds])].map(getQuestion).filter(question => !!question);
-  const reviewConcepts = [...new Set(reviewQuestions.map(question => question.concept))].slice(0, 2).join(' · ');
-  const completedLessons = region.lessons.filter(lesson => completedSteps.includes(lesson.id)).length;
-  return <>
-    <Row>{[{ value: `${completedLessons} / ${region.lessons.length}`, label: '학습 단계 완료' }, { value: `${count} / ${stepIds.length}`, label: '지역 진행' }, { value: String(profile.coins), label: '보유 코인' }].map(item => <View key={item.label} style={s.stat}><Text style={s.number}>{item.value}</Text><Text style={s.caption}>{item.label}</Text></View>)}</Row>
-    <View style={s.progress}><Row style={s.between}><Text style={s.label}>{region.title}</Text><Text style={s.small}>{count} / {stepIds.length} 단계 완료</Text></Row><Progress value={count / Math.max(stepIds.length, 1)} /></View>
-    {complete && <Body muted>현재 준비된 지역의 학습을 마쳤어요. 다음 지역은 준비 중이며, 완료한 학습은 다시 볼 수 있어요.</Body>}
-    <LerenButton title={complete ? '완료한 학습 다시 보기' : '이어서 학습하기'} onPress={() => router.push({ pathname: '/steps', params: { stage: String(region.id), step } })} />
-    {reviewQuestions.length > 0 && <Body muted>복습할 개념 · {reviewConcepts}</Body>}
-    <LinkRow title="전체 탐험 지도" subtitle={`현재 준비된 지역 ${regions.length}개`} onPress={() => router.push('/explore')} />
-  </>;
-}
-const s = StyleSheet.create({
-  hero: { borderWidth: 0, gap: 10 }, small: { ...TYPOGRAPHY.small, color: COLORS.muted },
-  stat: { flex: 1, backgroundColor: COLORS.soft, padding: 12, borderRadius: 12, gap: 6 },
-  number: { ...TYPOGRAPHY.heading, color: COLORS.primary }, caption: { ...TYPOGRAPHY.micro, color: COLORS.muted },
-  label: { ...TYPOGRAPHY.label, color: COLORS.ink }, between: { justifyContent: 'space-between' }, progress: { gap: 7 },
-  preview: { padding: 8 }, previewLabel: { ...TYPOGRAPHY.micro, color: COLORS.primary },
-});
