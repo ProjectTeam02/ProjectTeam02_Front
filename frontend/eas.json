@@ -1,0 +1,12 @@
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://lerenapp.com",
+        "EXPO_PUBLIC_AI_REQUESTS_ENABLED": "true"
+      }
+    }
+  }
+}

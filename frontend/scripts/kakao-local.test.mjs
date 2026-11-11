@@ -155,3 +155,11 @@ test('서버가 토큰을 누락하거나 HTML을 돌려주면 인증 성공으�
 test('브라우저가 없는 네이티브·CLI에서는 PC 웹 단계임을 명확히 안내한다', () => {
   assert.throws(getKakaoWebFlow, /PC 브라우저/);
 });
+
+/** 웹만 목적지를 요청하며 기존 모바일은 필드를 생략해 호환성을 유지합니다. */
+test('웹 로그인 시작에만 client web을 보낸다', async () => {
+  const f = fixture(); f.browser.client = 'web'; await f.flow.begin();
+  assert.equal(JSON.parse(f.calls[0].options.body).client, 'web');
+  const mobile = fixture(); await mobile.flow.begin();
+  assert.equal(JSON.parse(mobile.calls[0].options.body).client, undefined);
+});

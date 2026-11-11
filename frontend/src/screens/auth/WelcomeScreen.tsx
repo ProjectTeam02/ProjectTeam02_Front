@@ -1,10 +1,10 @@
 /**
  * 4번 페이지의 큰 Leren 로고 초기 화면입니다.
- * 이메일 로그인과 PC 웹의 실제 카카오 인증을 시작합니다.
+ * 이메일 로그인과 웹·모바일의 실제 카카오 인증을 시작합니다.
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
@@ -41,7 +41,7 @@ export default function WelcomeScreen() {
   const social = async () => {
     if (busy || socialBusy) return;
     setSocialBusy(true); setError('');
-    try { await startKakaoSignIn(); }
+    try { await startKakaoSignIn(); if (Platform.OS !== 'web') router.replace('/home'); }
     catch (cause) { setError(cause instanceof Error ? cause.message : '카카오 로그인을 시작하지 못했어요.'); }
     finally { setSocialBusy(false); }
   };
