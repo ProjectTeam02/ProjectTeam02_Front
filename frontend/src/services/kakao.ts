@@ -1,6 +1,6 @@
 /**
- * PC 웹에서 실제 카카오 인증을 시작하고 일회용 코드를 Leren 세션으로 교환합니다.
- * PKCE 검증값만 같은 탭의 sessionStorage에 잠시 보관하며, JWT·사용자 정보는 저장하거나 출력하지 않습니다.
+ * 웹·모바일에서 공통 검증으로 실제 카카오 인증을 시작하고 일회용 코드를 Leren 세션으로 교환합니다.
+ * 웹은 sessionStorage, 모바일은 메모리에 임시 검증값만 두며 JWT·사용자 정보는 영구 저장하거나 출력하지 않습니다.
  */
 import { getAuthenticatedApiBaseUrl } from './apiConfig.ts';
 import { parseLoginResponse, type LoginResult } from './authContract.ts';
@@ -11,8 +11,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const object = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 interface PendingLogin { verifier: string; attemptId: string; origin: string; createdAt: number; expiresAt: number }
 interface BrowserDependencies {
+  client?: 'web' | 'mobile';
   storage: Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
-  crypto: Pick<Crypto, 'getRandomValues' | 'subtle'>;
+  crypto: {
+    getRandomValues: (bytes: Uint8Array<ArrayBuffer>) => Uint8Array;
+    subtle: { digest: (algorithm: string, bytes: Uint8Array<ArrayBuffer>) => Promise<ArrayBuffer> };
+  };
   fetch: typeof fetch;
   now: () => number;
   currentUrl: () => string;
@@ -64,7 +68,7 @@ export function createKakaoFlow(browser: BrowserDependencies) {
         browser.storage.removeItem(STORAGE_KEY);
         const origin = getAuthenticatedApiBaseUrl();
         const { verifier, challenge } = await createPkce(browser.crypto);
-        const response = await post('/api/v1/auth/kakao/start', { codeChallenge: challenge, codeChallengeMethod: 'S256' }, origin);
+        const response = await post('/api/v1/auth/kakao/start', { codeChallenge: challenge, codeChallengeMethod: 'S256', ...(browser.client ? { client: browser.client } : {}) }, origin);
         if (!object(response) || response.success !== true || !object(response.data)) throw new Error('카카오 로그인 시작 응답 형식이 올바르지 않아요.');
         const data = response.data;
         if (typeof data.authorizationUrl !== 'string' || typeof data.loginAttemptId !== 'string' || !UUID.test(data.loginAttemptId)
@@ -142,7 +146,7 @@ export function getKakaoWebFlow() {
   }
   let storage: Storage;
   try { storage = window.sessionStorage; } catch { throw new Error('브라우저의 탭 저장소가 차단돼 있어요. 저장소 사용을 허용한 PC 브라우저에서 다시 시도해 주세요.'); }
-  webFlow ??= createKakaoFlow({ storage, crypto: window.crypto, fetch: (...args) => fetch(...args),
+  webFlow ??= createKakaoFlow({ client: 'web', storage, crypto: window.crypto, fetch: (...args) => fetch(...args),
     now: Date.now, currentUrl: () => window.location.href,
     replaceUrl: cleanUrl => window.history.replaceState(window.history.state, '', cleanUrl), navigate: url => window.location.assign(url) });
   return webFlow;
