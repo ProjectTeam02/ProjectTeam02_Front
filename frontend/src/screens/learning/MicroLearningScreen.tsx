@@ -7,6 +7,7 @@ import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenCard from '../../components/common/LerenCard';
 import LerenButton from '../../components/common/LerenButton';
 import { useLearningQuery } from '../../hooks/useLearningQuery';
+import { isAiGenerationEnabled } from '../../services/aiRequestPolicy';
 import { conceptDecoder, isLearningId, LEARNING_PATHS, stageDetailDecoder, type StageDetail } from '../../services/learningApi';
 
 export default function MicroLearningScreen() {
@@ -34,7 +35,7 @@ function ConceptCards({ stage }: { stage: StageDetail }) {
       {concept.data.shortDefinition && <LerenCard title="개념" description={concept.data.shortDefinition} variant="info" />}
       {concept.data.cards.map(card => <LerenCard key={card.sectionId} title={card.title ?? `학습 카드 ${card.pageNo}`} description={card.body} />)}
       {concept.data.summary && <LerenCard title="핵심 정리" description={concept.data.summary} variant="reward" />}
-      <LinkRow title="AI 튜터에게 질문" subtitle="실제 질문 전송은 별도 활성화가 필요합니다." onPress={() => router.push({ pathname: '/tutor', params: { concept: concept.data!.title } })} />
+      <LinkRow title="AI 튜터에게 질문" subtitle={isAiGenerationEnabled() ? 'EC2의 AI 튜터에게 질문합니다.' : '실제 질문 전송은 별도 활성화가 필요합니다.'} onPress={() => router.push({ pathname: '/tutor', params: { concept: concept.data!.title } })} />
     </>}
     {stage.stageType === 'NORMAL'
       ? <LerenButton title="퀴즈 시작 화면으로" onPress={() => router.push({ pathname: '/quiz', params: { stageId: stage.stageId } })} />
