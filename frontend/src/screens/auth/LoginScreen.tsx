@@ -4,7 +4,7 @@
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Text, StyleSheet } from 'react-native';
+import { Platform, Text, StyleSheet } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Notice } from '../../components/ui/Primitives';
 import LerenInput from '../../components/common/LerenInput';
@@ -55,7 +55,7 @@ export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPa
   const social = async () => {
     if (busy || socialBusy) return;
     setSocialBusy(true); setError('');
-    try { await (onKakaoLogin || startKakaoSignIn)(); }
+    try { await (onKakaoLogin || startKakaoSignIn)(); if (!onKakaoLogin && Platform.OS !== 'web') router.replace('/home'); }
     catch (cause) { setError(cause instanceof Error ? cause.message : '카카오 로그인을 시작하지 못했어요.'); setStatus('kakaoError'); }
     finally { setSocialBusy(false); }
   };
