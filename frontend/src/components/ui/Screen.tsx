@@ -40,7 +40,8 @@ export default function Screen({ title, children, back = true, tabs = false, foo
           {tabs && <View style={styles.tabs}>
             {TABS.map(tab => {
               const active = pathname === tab.path || (tab.path === '/explore' && ['/steps', '/lesson', '/quiz', '/result'].includes(pathname));
-              return <Pressable key={tab.path} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} onPress={() => { if (!active) router.replace(tab.path as Href); }} style={styles.tab}>
+              // 하위 학습 화면도 탐험 탭을 강조하지만, 탭을 누르면 탐험 목록으로 돌아가야 합니다.
+              return <Pressable key={tab.path} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} onPress={() => { if (pathname !== tab.path) router.replace(tab.path as Href); }} style={styles.tab}>
                 <Text style={[styles.tabIcon, active && styles.active]}>{tab.icon}</Text><Text style={[styles.tabLabel, active && styles.active]}>{tab.label}</Text>
               </Pressable>;
             })}
