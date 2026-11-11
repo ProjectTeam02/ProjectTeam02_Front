@@ -7,9 +7,11 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.leren.frontend.dev",
       "supportsTablet": true
     },
     "android": {
+      "package": "com.leren.frontend.dev",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -24,7 +26,9 @@
       "expo-status-bar",
       "expo-router",
       "expo-font",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "expo-web-browser",
+      "./plugins/withAndroidShortObjectPaths"
     ],
     "scheme": "leren"
   }
