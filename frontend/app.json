@@ -12,6 +12,7 @@
     },
     "android": {
       "package": "com.leren.frontend.dev",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -30,6 +31,12 @@
       "expo-web-browser",
       "./plugins/withAndroidShortObjectPaths"
     ],
-    "scheme": "leren"
+    "scheme": "leren",
+    "extra": {
+      "eas": {
+        "projectId": "2970762f-27a0-4c86-8d3a-2f79cdda6e5b"
+      }
+    },
+    "owner": "leren"
   }
 }
