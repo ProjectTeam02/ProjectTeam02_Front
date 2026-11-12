@@ -24,8 +24,8 @@ export default function Screen({ title, children, back = true, tabs = false, foo
     if (onBack) { onBack(); return; }
     if (router.canGoBack()) router.back(); else router.replace('/home');
   };
-  // 정식 목록·저장 API가 없는 시안 화면은 실제 서버 기록과 혼동하지 않도록 항상 표시합니다.
-  const showPreview = preview || ['/review', '/jobs'].includes(pathname);
+  // 복습과 시안 안내를 요청한 화면에서는 실제 서버 기록에 반영되지 않는다는 안내를 표시합니다.
+  const showPreview = preview || pathname === '/review';
   const body = <View style={[styles.content, !scroll && styles.flex]}>{showPreview && <Notice>아직 미연결 · 개발용 학습·캐릭터 미리보기입니다. 이 화면의 학습·복습·직업·코인·보상·구매·채점 결과는 시안이며 실제 회원 기록에 저장되지 않습니다.</Notice>}{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>

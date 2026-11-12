@@ -1,8 +1,12 @@
 # 데스크탑 이전과 최신 노트북 작업 반영
 
-2026-11-11 한국 시간. 최신 원본은 노트북의 공유 폴더이며, 이번 반영은 원격 develop을 기준으로 선별했습니다. 원본의 미커밋 작업은 변경하지 않았습니다.
+2026-11-11 한국 시간에 노트북 공유 폴더의 작업을 원격 `develop`을 기준으로 선별해 [PR #10](https://github.com/ProjectTeam02/ProjectTeam02_Front/pull/10)에 반영했습니다. 11월 12일 APK 배포 절차는 [Android APK 가이드](ANDROID_APK.md)에 기록했습니다.
 
-## 이번 반영
+## PC 폴더와 GitHub 구조
+
+PC에서 `leren-share`는 동기화용 상위 폴더입니다. GitHub에서는 `ProjectTeam02_Front`의 내부가 저장소 루트입니다. 클론한 폴더를 열면 루트의 `README.md`, `.easignore`와 `frontend/`가 바로 보입니다. 이 문서의 실행 명령과 파일 경로는 저장소 루트를 기준으로 합니다.
+
+## 11월 11일 반영 범위
 
 - 이미 main에 병합된 PR #8의 정식 API·오류 구분·리다이렉트 차단·회귀 테스트·SDK 호환 업데이트를 유지합니다.
 - 모바일 카카오의 암호화/시스템 인증 창, leren 딥링크 복귀, 공통 PKCE 코드 교환과 성공 후 홈 이동을 추가합니다.
@@ -14,7 +18,7 @@
 
 ## 필요한 파일
 
-새 PC에서는 최신 develop 또는 main을 내려받으면 됩니다. `frontend/src`, `assets`, `plugins`, `scripts`, package.json/package-lock.json, app.json, eas.json, index.js, TypeScript/ESLint 설정, .gitignore, 문서를 포함합니다.
+새 PC에서는 최신 `develop` 또는 `main`을 내려받고 `frontend/`에서 `npm ci`를 실행합니다. 저장소 루트의 `.easignore`는 EAS 빌드에 사용할 파일을 선택합니다. `frontend/`에는 코드·에셋·플러그인·테스트·잠금 파일·Expo/EAS 설정과 실행 문서가 있습니다.
 
 실제 `.env`는 공유하지 않으며 `.env.example`로 새로 만듭니다. 공개 설정은 API=https://lerenapp.com과 AI 요청 허용 여부입니다. 개발용 학습 카탈로그 주소는 필요 없습니다. 키·JWT·DB 인증정보는 넣지 않습니다.
 
@@ -24,7 +28,7 @@ node_modules, .expo, dist, android/ios 생성물, Gradle/CMake 캐시와 local.p
 
 실제 Android/iOS 인증·복귀·회원 조회, 운영 계정의 전체 학습 흐름과 키보드/UI 확인은 #3에서 계속 추적합니다. 도구 의존성 보안 권고는 #7에서 유지합니다. 이번 변경의 계약 검사·번들 생성은 실서버·실기기 성공이나 다른 팀원의 승인을 뜻하지 않습니다.
 
-## 이번 검증 결과
+## 11월 11일 검증 결과
 
 - 최종 잠금 파일로 npm ci 새 설치, 타입 검사, lint, 전체 테스트 66개 통과.
 - Expo SDK 호환 검사 통과. 공통 config와 Android introspection에서 leren scheme 및 CMake 경로 설정 260 확인.

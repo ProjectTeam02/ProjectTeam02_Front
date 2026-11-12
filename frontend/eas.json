@@ -1,4 +1,7 @@
 {
+  "cli": {
+    "appVersionSource": "local"
+  },
   "build": {
     "development": {
       "developmentClient": true,
@@ -6,6 +9,18 @@
       "env": {
         "EXPO_PUBLIC_API_URL": "https://lerenapp.com",
         "EXPO_PUBLIC_AI_REQUESTS_ENABLED": "true"
+      }
+    },
+    "apk": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "environment": "production",
+      "android": {
+        "buildType": "apk",
+        "env": {
+          "EXPO_PUBLIC_API_URL": "https://lerenapp.com",
+          "EXPO_PUBLIC_AI_REQUESTS_ENABLED": "true"
+        }
       }
     }
   }
