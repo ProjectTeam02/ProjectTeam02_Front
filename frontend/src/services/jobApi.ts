@@ -17,6 +17,12 @@ export const jobsDecoder = (value: unknown): JobList => {
   return { items: array(d.items, jobDecoder) };
 };
 export interface JobChange { userId: string; classId: string; classCode: string }
+export const initialJobDecoder = (value: unknown) => {
+  const d = object(value);
+  const characterClass = jobDecoder(d.characterClass);
+  if (d.onboardingCompleted !== true) return invalid();
+  return { characterClass, onboardingCompleted: true };
+};
 export const jobChangeDecoder = (value: unknown): JobChange => {
   const d = object(value);
   return { userId: str(d.userId), classId: str(d.classId), classCode: str(d.classCode) };
