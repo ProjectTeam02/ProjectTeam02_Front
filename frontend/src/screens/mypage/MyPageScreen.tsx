@@ -16,7 +16,7 @@ export default function MyPageScreen() {
     <LinkRow title="학습 통계·이력" subtitle="실제 서버 기록 조회" onPress={() => router.push('/statistics')} />
     <LinkRow title="학습 달력" subtitle="기록과 예정 일정" onPress={() => router.push('/calendar')} />
     <LinkRow title="직업·장착 코스튬" subtitle="서버에 저장된 현재 장착 조회" onPress={() => router.push('/wardrobe')} />
-    <LinkRow title="코스튬 상점" subtitle="구매 API 준비 중" onPress={() => router.push('/shop')} />
+    <LinkRow title="코스튬 상점" subtitle="서버 상품 조회 및 코스튬 구매" onPress={() => router.push('/shop')} />
     <LinkRow title="프로필·설정" subtitle="알림 · 계정 관리" onPress={() => router.push('/settings')} />
     <LinkRow title="API 연결 현황" subtitle="연결 성공 · 데이터 없음 · 미연결 확인" onPress={() => router.push('/connections')} />
   </Screen>;
