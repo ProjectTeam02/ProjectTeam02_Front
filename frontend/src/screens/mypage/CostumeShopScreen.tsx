@@ -3,17 +3,19 @@ import { useRef, useState } from 'react';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import * as Crypto from 'expo-crypto';
 import Screen from '../../components/ui/Screen';
-import { Body, Empty, Notice, Row } from '../../components/ui/Primitives';
+import { Body, Chip, Empty, Notice, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
 import { useBackend } from '../../hooks/useBackend';
 import { useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
-import { COSTUME_PATHS, costumesDecoder, purchaseDecoder, type Costume } from '../../services/costumeApi';
+import { COSTUME_PATHS, costumesDecoder, costumeDecoder, purchaseDecoder, type Costume } from '../../services/costumeApi';
 
 export default function CostumeShopScreen() {
   const [page, setPage] = useState(1);
+  const [filter, setFilter] = useState('전체');
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [noticeError, setNoticeError] = useState(false);
   const [confirmItem, setConfirmItem] = useState<Costume | null>(null);
@@ -21,7 +23,9 @@ export default function CostumeShopScreen() {
   const request = useRef<{ itemId: string; requestId: string } | null>(null);
   const profile = useBackendProfile();
   const shop = useBackend(`${COSTUME_PATHS.shop}?page=${page}&size=10`, costumesDecoder);
+  const detail = useBackend(detailId ? COSTUME_PATHS.detail(detailId) : null, costumeDecoder);
   const action = useBackendAction();
+  const filteredItems = shop.data?.items.filter(item => filter === '전체' || item.category.toLowerCase() === ({ 검사: 'warrior', 마법사: 'mage', 궁수: 'archer' } as Record<string, string>)[filter] || item.category === filter) ?? [];
   const totalPages = shop.data ? Math.ceil(shop.data.total / shop.data.size) : 0;
 
   const purchase = (item: Costume) => {
@@ -54,12 +58,25 @@ export default function CostumeShopScreen() {
     {profile.data && <LerenCard title={`보유 코인 ${profile.data.coinBalance?.toLocaleString() ?? '확인 불가'}개`}
       description="코스튬을 구매하면 서버에서 코인이 차감됩니다." variant="info" />}
     <ApiStatus resource={shop} label="코스튬 상품 목록" empty={shop.data?.total === 0} />
+    <Row>{['전체', '검사', '마법사', '궁수'].map(name => <Chip key={name} label={name} active={filter === name} onPress={() => setFilter(name)} />)}</Row>
+    {detailId && <LerenCard title="코스튬 상세">
+      <ApiStatus resource={detail} label="코스튬 상세" />
+      {detail.data && <>
+        <Body>{detail.data.name}</Body>
+        <Body>{detail.data.description ?? '설명이 없습니다.'}</Body>
+        {!!detail.data.flavorText && <Body muted>{detail.data.flavorText}</Body>}
+        <Body>가격: {detail.data.priceCoin === null ? '구매 불가' : `${detail.data.priceCoin.toLocaleString()}코인`}</Body>
+        <LerenButton title={detail.data.owned ? '보유 중' : '구매하기'} disabled={detail.data.owned || detail.data.priceCoin === null || action.busy || pendingItemId !== null} onPress={() => purchase(detail.data!)} />
+      </>}
+      <LerenButton title="상세 닫기" variant="secondary" onPress={() => setDetailId(null)} />
+    </LerenCard>}
     {!!message && <Notice tone={noticeError ? 'error' : 'success'}>{message}</Notice>}
     {!!action.error && <Notice tone="error">구매 요청 확인 필요: {action.error} 구매 내역을 확인하기 전에는 반복해서 구매하지 마세요.</Notice>}
     {shop.data?.total === 0 && <Empty title="판매 중인 코스튬이 없어요" description="새로운 코스튬이 등록되면 이곳에서 확인할 수 있어요." />}
-    {shop.data?.items.map(item => <LerenCard key={item.itemId} title={item.name}
+    {filteredItems.map(item => <LerenCard key={item.itemId} title={item.name}
       description={`${item.description ?? '코스튬 설명이 없습니다.'}\n분류: ${item.category}\n가격: ${item.priceCoin === null ? '구매 불가' : `${item.priceCoin.toLocaleString()}코인`}`}>
       <Body muted>{item.owned ? '이미 보유한 코스튬' : '구매 가능한 코스튬'}</Body>
+      <LerenButton title="상세 보기" variant="secondary" onPress={() => setDetailId(item.itemId)} />
       <LerenButton title={item.owned ? '보유 중' : item.priceCoin === null ? '구매 불가' : '구매하기'}
         disabled={item.owned || item.priceCoin === null || action.busy || pendingItemId !== null || profile.data?.coinBalance == null}
         loading={pendingItemId === item.itemId} onPress={() => purchase(item)} />
