@@ -32,7 +32,7 @@ export function useBackendAction() {
   const [error, setError] = useState('');
   const pending = useRef<AbortController | null>(null);
   useEffect(() => () => { pending.current?.abort(); }, [session]);
-  const run = async <T,>(path: string, decode: Decoder<T>, method: 'POST' | 'PATCH' | 'DELETE', body?: unknown, idempotencyKey?: string): Promise<T | null> => {
+    const run = async <T,>(path: string, decode: Decoder<T>, method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', body?: unknown, idempotencyKey?: string): Promise<T | null> => {
     if (pending.current || !session) return null;
     const controller = new AbortController(); pending.current = controller; setBusy(true); setError('');
     try { const data = await backendRequest(session.accessToken, path, decode, { method, body, signal: controller.signal, idempotencyKey }); return controller.signal.aborted ? null : data; }

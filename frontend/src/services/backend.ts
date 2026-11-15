@@ -20,7 +20,7 @@ const list = <T>(v: unknown, decode: Decoder<T>): T[] => Array.isArray(v) ? v.ma
 const titleRef = (v: unknown): (Obj & { title: string }) | null => v === null ? null : { ...object(v), title: str(object(v).title) };
 
 /** 타임아웃·화면 이탈을 취소하며, 인증 요청을 다른 주소로 자동 재전송하지 않습니다. */
-export async function backendRequest<T>(token: string, path: string, decode: Decoder<T>, options: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal; idempotencyKey?: string } = {}): Promise<T> {
+export async function backendRequest<T>(token: string, path: string, decode: Decoder<T>, options: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal; idempotencyKey?: string } = {}): Promise<T> {
   // 연결 확인 중에는 UI를 우회해도 유료 생성 요청을 네트워크 전송 전에 막습니다.
   assertAiRequestAllowed(path, options.method ?? 'GET');
   const origin = getAuthenticatedApiBaseUrl();
