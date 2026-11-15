@@ -1,6 +1,6 @@
 /** 서버에서 보유 코스튬을 조회하고 선택한 코스튬을 장착합니다. */
 import { useState } from 'react';
-import { Alert } from 'react-native';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { router } from 'expo-router';
 import Screen from '../../components/ui/Screen';
 import { ApiStatus } from '../../components/ui/ApiStatus';
@@ -17,16 +17,15 @@ export default function WardrobeScreen() {
   const action = useBackendAction();
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [confirmItem, setConfirmItem] = useState<Costume | null>(null);
 
   const equip = (item: Costume) => {
     if (action.busy || pendingItemId || inventory.data?.equipped.some(row => row.itemId === item.itemId)) return;
-    Alert.alert('코스튬 장착', `${item.name}을(를) 장착할까요?`, [
-      { text: '취소', style: 'cancel' },
-      { text: '장착하기', onPress: () => { void confirmEquip(item); } },
-    ]);
+    setConfirmItem(item);
   };
   const confirmEquip = async (item: Costume) => {
     if (action.busy || pendingItemId) return;
+    setConfirmItem(null);
     setPendingItemId(item.itemId); setMessage('');
     try {
       const result = await action.run(equipCostumePath(item.itemId), equipDecoder, 'PUT');
@@ -35,6 +34,7 @@ export default function WardrobeScreen() {
   };
 
   return <Screen title="직업·장착 코스튬" back tabs>
+    <ConfirmDialog visible={confirmItem !== null} title="코스튬 장착" message={confirmItem ? `${confirmItem.name}을(를) 장착할까요?` : ''} confirmLabel="장착하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmEquip(confirmItem); }} />
     <ApiStatus resource={profile} label="직업 조회" />
     {profile.data && <LerenCard title={profile.data.characterClass?.name ?? '직업 데이터 없음'}
       description={profile.data.equippedCostumes.map(item => item.name ?? '코스튬').join(', ') || '현재 장착한 코스튬이 없어요.'} />}
