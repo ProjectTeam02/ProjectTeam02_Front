@@ -1,5 +1,5 @@
 /** 웹과 네이티브에서 동일하게 동작하는 확인창입니다. */
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import LerenButton from '../common/LerenButton';
 
 type Props = {
