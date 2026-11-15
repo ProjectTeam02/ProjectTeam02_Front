@@ -15,6 +15,7 @@ import { COSTUME_PATHS, costumesDecoder, purchaseDecoder, type Costume } from '.
 export default function CostumeShopScreen() {
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState('');
+  const [noticeError, setNoticeError] = useState(false);
   const [confirmItem, setConfirmItem] = useState<Costume | null>(null);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const request = useRef<{ itemId: string; requestId: string } | null>(null);
@@ -26,15 +27,15 @@ export default function CostumeShopScreen() {
   const purchase = (item: Costume) => {
     if (action.busy || item.owned || item.priceCoin === null) return;
     const balance = profile.data?.coinBalance;
-    if (balance === null || balance === undefined) { setMessage('보유 코인을 확인한 뒤 다시 시도해 주세요.'); return; }
-    if (balance < item.priceCoin) { setMessage('구매에 필요한 코인이 부족합니다.'); return; }
+    if (balance === null || balance === undefined) { setNoticeError(true); setMessage('보유 코인을 확인한 뒤 다시 시도해 주세요.'); return; }
+    if (balance < item.priceCoin) { setNoticeError(true); setMessage('구매에 필요한 코인이 부족합니다.'); return; }
     setConfirmItem(item);
   };
 
   const confirmPurchase = async (item: Costume) => {
     if (action.busy || pendingItemId) return;
     setConfirmItem(null);
-    setMessage(''); setPendingItemId(item.itemId);
+    setNoticeError(false); setMessage(''); setPendingItemId(item.itemId);
     if (request.current?.itemId !== item.itemId) request.current = { itemId: item.itemId,
       requestId: `costume:${Crypto.randomUUID()}` };
     try {
@@ -53,7 +54,7 @@ export default function CostumeShopScreen() {
     {profile.data && <LerenCard title={`보유 코인 ${profile.data.coinBalance?.toLocaleString() ?? '확인 불가'}개`}
       description="코스튬을 구매하면 서버에서 코인이 차감됩니다." variant="info" />}
     <ApiStatus resource={shop} label="코스튬 상품 목록" empty={shop.data?.total === 0} />
-    {!!message && <Notice tone="success">{message}</Notice>}
+    {!!message && <Notice tone={noticeError ? 'error' : 'success'}>{message}</Notice>}
     {!!action.error && <Notice tone="error">구매 요청 확인 필요: {action.error} 구매 내역을 확인하기 전에는 반복해서 구매하지 마세요.</Notice>}
     {shop.data?.total === 0 && <Empty title="판매 중인 코스튬이 없어요" description="새로운 코스튬이 등록되면 이곳에서 확인할 수 있어요." />}
     {shop.data?.items.map(item => <LerenCard key={item.itemId} title={item.name}
