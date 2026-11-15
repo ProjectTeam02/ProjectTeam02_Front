@@ -11,7 +11,7 @@ import { ApiStatus } from '../../components/ui/ApiStatus';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
-import { JOB_PATHS, jobsDecoder, jobChangeDecoder, type CharacterJob } from '../../services/jobApi';
+import { JOB_PATHS, jobsDecoder, jobChangeDecoder, initialJobDecoder, type CharacterJob } from '../../services/jobApi';
 
 export type JobId = 'warrior' | 'mage' | 'archer';
 export interface SaveJobResult { success: boolean }
@@ -57,7 +57,7 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
         if (!serverJob) { setError('서버에서 선택한 직업 정보를 찾을 수 없습니다.'); return; }
         if (profile.status !== 'success') { setError('회원 정보를 확인한 뒤 다시 시도해 주세요.'); return; }
         const result = initialSelection
-          ? await action.run(JOB_PATHS.initial, jobChangeDecoder, 'PATCH', { classCode: serverJob.classCode })
+          ? await action.run(JOB_PATHS.initial, initialJobDecoder, 'PATCH', { classCode: serverJob.classCode })
           : await action.run(JOB_PATHS.change, jobChangeDecoder, 'PATCH', { classId: serverJob.classId });
         if (!result) { setError('직업 변경 요청에 실패했습니다.'); return; }
         profile.reload();
