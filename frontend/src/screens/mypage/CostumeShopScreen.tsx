@@ -1,6 +1,7 @@
 /** 실제 코스튬 상품 목록과 구매 API를 연결합니다. 구매·코인 차감은 서버 응답만 사용합니다. */
 import { useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
+import * as Crypto from 'expo-crypto';
 import Screen from '../../components/ui/Screen';
 import { Body, Empty, Notice, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
@@ -14,6 +15,7 @@ import { COSTUME_PATHS, costumesDecoder, purchaseDecoder, type Costume } from '.
 export default function CostumeShopScreen() {
   const [page, setPage] = useState(1);
   const [message, setMessage] = useState('');
+  const [confirmItem, setConfirmItem] = useState<Costume | null>(null);
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const request = useRef<{ itemId: string; requestId: string } | null>(null);
   const profile = useBackendProfile();
@@ -24,19 +26,17 @@ export default function CostumeShopScreen() {
   const purchase = (item: Costume) => {
     if (action.busy || item.owned || item.priceCoin === null) return;
     const balance = profile.data?.coinBalance;
-    if (balance === null || balance === undefined) { Alert.alert('잔액 확인 필요', '보유 코인을 확인한 뒤 다시 시도해 주세요.'); return; }
-    if (balance < item.priceCoin) { Alert.alert('코인 부족', '구매에 필요한 코인이 부족합니다.'); return; }
-    Alert.alert('코스튬 구매', `${item.name}\n가격: ${item.priceCoin.toLocaleString()}코인\n구매하면 실제 코인이 차감됩니다.`, [
-      { text: '취소', style: 'cancel' },
-      { text: '구매하기', onPress: () => { void confirmPurchase(item); } },
-    ]);
+    if (balance === null || balance === undefined) { setMessage('보유 코인을 확인한 뒤 다시 시도해 주세요.'); return; }
+    if (balance < item.priceCoin) { setMessage('구매에 필요한 코인이 부족합니다.'); return; }
+    setConfirmItem(item);
   };
 
   const confirmPurchase = async (item: Costume) => {
     if (action.busy || pendingItemId) return;
+    setConfirmItem(null);
     setMessage(''); setPendingItemId(item.itemId);
     if (request.current?.itemId !== item.itemId) request.current = { itemId: item.itemId,
-      requestId: `costume:${Date.now()}:${Math.random().toString(36).slice(2)}` };
+      requestId: `costume:${Crypto.randomUUID()}` };
     try {
       const result = await action.run(COSTUME_PATHS.purchase, purchaseDecoder, 'POST', request.current);
       if (result) {
@@ -48,6 +48,7 @@ export default function CostumeShopScreen() {
   };
 
   return <Screen title="코스튬 상점" back tabs>
+    <ConfirmDialog visible={confirmItem !== null} title="코스튬 구매" message={confirmItem ? `${confirmItem.name}\n가격: ${confirmItem.priceCoin?.toLocaleString()}코인\n구매하면 실제 코인이 차감됩니다.` : ''} confirmLabel="구매하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmPurchase(confirmItem); }} />
     <ApiStatus resource={profile} label="보유 코인" />
     {profile.data && <LerenCard title={`보유 코인 ${profile.data.coinBalance?.toLocaleString() ?? '확인 불가'}개`}
       description="코스튬을 구매하면 서버에서 코인이 차감됩니다." variant="info" />}
