@@ -1,6 +1,7 @@
 /** 공통 진입점: 글꼴·인증·회원 상태와 정식 서버 화면의 접근 제어를 구성합니다. */
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, router, usePathname } from 'expo-router';
+import { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,7 +13,7 @@ import { PixelifySans_700Bold } from '@expo-google-fonts/pixelify-sans/700Bold';
 import { LearningProgressProvider } from '../context/LearningProgressContext';
 import { LearningContentProvider } from '../context/LearningContentContext';
 import { AuthProvider, useAuth } from '../context/AuthContext';
-import { BackendProfileProvider } from '../context/BackendProfileContext';
+import { BackendProfileProvider, useBackendProfile } from '../context/BackendProfileContext';
 import { COLORS } from '../constants/theme';
 export default function RootLayout() {
   const [loaded, error] = useFonts({ NotoSansKR_400Regular, NotoSansKR_500Medium, NotoSansKR_700Bold, PixelifySans_700Bold });
@@ -23,7 +24,7 @@ export default function RootLayout() {
 /** 주소 직접 입력이나 뒤로 가기로 인증 없이 학습 화면에 들어가지 않게 합니다. 서버 권한 검사와는 별도입니다. */
 function AuthenticatedScreens() {
   const { session, sessionRevision } = useAuth();
-  return <BackendProfileProvider key={sessionRevision}><LearningProgressProvider><StatusBar style="dark" />
+  return <BackendProfileProvider key={sessionRevision}><LearningProgressProvider><InitialJobGate /><StatusBar style="dark" />
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: COLORS.surface }, animation: 'slide_from_right' }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
@@ -38,3 +39,15 @@ function AuthenticatedScreens() {
   </LearningProgressProvider></BackendProfileProvider>;
 }
 const s = StyleSheet.create({ loading: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, backgroundColor: COLORS.surface } });
+
+/** 인증 후 직업이 없는 계정만 최초 선택으로 안내합니다. 조회 실패 시 임의로 이동하지 않습니다. */
+function InitialJobGate() {
+  const { session } = useAuth();
+  const profile = useBackendProfile();
+  const pathname = usePathname();
+  useEffect(() => {
+    if (!session || profile.status !== 'success' || !profile.data) return;
+    if (profile.data.characterClass === null && pathname !== '/jobs') router.replace('/jobs');
+  }, [session, profile.status, profile.data, pathname]);
+  return null;
+}
