@@ -1,23 +1,22 @@
-/**
- * 피그마 26번 설정 화면입니다. 각 설정으로 이동하고 로그아웃 확인 UI를 표시합니다.
- * 로그아웃은 기존 서버 세션을 폐기합니다. 학습 알림 저장과 프로필 조회는 실제 API를 사용합니다.
- */
+/** 피그마 26-01, 26-05: 설정 목록 및 로그아웃 확인 */
 import { useState } from 'react';
 import { router } from 'expo-router';
-import LerenButton from '../../components/common/LerenButton';
-import LerenCard from '../../components/common/LerenCard';
 import Screen from '../../components/ui/Screen';
 import { LinkRow, Notice } from '../../components/ui/Primitives';
-import { useLearningProgress } from '../../context/LearningProgressContext';
+import LerenButton from '../../components/common/LerenButton';
+import LerenCard from '../../components/common/LerenCard';
+import { useBackendProfile } from '../../context/BackendProfileContext';
 import { useAuth } from '../../context/AuthContext';
 
 export default function SettingsScreen() {
-  const { profile } = useLearningProgress();
-  const [confirmLogout, setConfirmLogout] = useState(false);
+  const profile = useBackendProfile();
   const { signOut } = useAuth();
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  // 통신 실패 시 인증 상태를 유지하고 재시도를 안내합니다. 성공하면 화면 보호가 초기 화면으로 이동시킵니다.
+  const nickname = profile.data?.nickname;
+
+  /** 실제 서버 세션 폐기에 성공하면 인증 상태가 초기화됩니다. */
   const submitLogout = async () => {
     if (busy) return;
     setBusy(true); setError('');
@@ -26,20 +25,20 @@ export default function SettingsScreen() {
     finally { setBusy(false); }
   };
 
-  return (
-    <Screen title="설정" back tabs onBack={confirmLogout ? () => setConfirmLogout(false) : undefined}>
-      <LerenCard title={`${profile.nickname}님의 학습 환경`} description="나에게 맞게 프로필과 알림을 설정해요." variant="info" />
-      <LinkRow title="프로필 수정" subtitle="닉네임 · 이메일" onPress={() => router.push('/profile')} />
-      <LinkRow title="학습 알림" subtitle="켜기·끄기 서버 저장 · 현재값 조회는 준비 중" onPress={() => router.push('/notifications')} />
-      <LinkRow title="비밀번호 재설정" subtitle="본인 확인·재설정 API 준비 중" onPress={() => router.push('/reset-password')} />
-      <LerenCard title="나의 학습 기록" description="학습 이력과 달력은 서버 기록을 조회합니다. 개발용 학습 미리보기의 로컬 진행도는 정식 기록에 저장되지 않습니다." variant="info" />
-      {confirmLogout ? (
-        <LerenCard title="로그아웃할까요?" description="서버의 로그인 세션을 종료하고 임시 학습 기록을 초기화합니다.">
-          <LerenButton title="로그아웃" loading={busy} disabled={busy} onPress={submitLogout} />
-          {!!error && <Notice tone="error">{error}</Notice>}
-          <LerenButton title="계속 둘러보기" variant="secondary" onPress={() => setConfirmLogout(false)} />
-        </LerenCard>
-      ) : <LerenButton title="로그아웃" variant="secondary" onPress={() => setConfirmLogout(true)} />}
-    </Screen>
-  );
+  return <Screen title="설정" back tabs>
+    {nickname && <LerenCard title={`${nickname}님의 학습 환경`} description="나에게 맞게 프로필과 알림을 설정해요." variant="info" />}
+    {profile.status === 'loading' && <Notice>프로필을 불러오는 중이에요.</Notice>}
+    {profile.status === 'error' && <Notice tone="error">{profile.error}</Notice>}
+    <LinkRow title="프로필 수정" subtitle="닉네임 · 이메일" onPress={() => router.push('/profile')} />
+    <LinkRow title="학습 알림" subtitle="학습 알림 시간 설정" onPress={() => router.push('/notifications')} />
+    <LinkRow title="비밀번호 재설정" subtitle="등록한 이메일로 안내" onPress={() => router.push('/reset-password')} />
+    <LerenCard title="학습 기록은 계정에 저장돼요" description="같은 계정으로 로그인하면 완료한 학습과 성장 기록을 이어서 볼 수 있어요." variant="info" />
+    {confirmLogout ? <>
+      <LerenCard title="로그아웃할까요?" description="다시 로그인하면 학습 기록을 이어서 볼 수 있어요.">
+        <LerenButton title="로그아웃" loading={busy} disabled={busy} onPress={() => { void submitLogout(); }} />
+        <LerenButton title="취소" variant="secondary" disabled={busy} onPress={() => setConfirmLogout(false)} />
+      </LerenCard>
+      {!!error && <Notice tone="error">{error}</Notice>}
+    </> : <LerenButton title="로그아웃" variant="secondary" onPress={() => setConfirmLogout(true)} />}
+  </Screen>;
 }
