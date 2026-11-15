@@ -24,5 +24,6 @@ export const jobChangeDecoder = (value: unknown): JobChange => {
 
 export const JOB_PATHS = {
   list: '/api/v1/character-classes',
+  initial: '/api/v1/users/me/character-class',
   change: '/api/v1/users/me/character/class',
 };
