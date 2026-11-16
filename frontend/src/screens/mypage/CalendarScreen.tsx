@@ -1,4 +1,4 @@
-/** 서울 기준 월·일별 기록과 실제 학습 일정 CRUD를 연결합니다. 예시 단계 ID를 서버에 보내지 않습니다. */
+/** 서울 기준 달력과 공개 학습 목록을 연결합니다. 학습 이력이 없어도 서버의 공개 단계로 첫 일정을 만들 수 있습니다. */
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
@@ -9,12 +9,13 @@ import LerenButton from '../../components/common/LerenButton';
 import LerenInput from '../../components/common/LerenInput';
 import LerenCard from '../../components/common/LerenCard';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
-import { PATHS, monthDecoder, dayDecoder, historyDecoder, planDecoder, deletedDecoder, type Plan } from '../../services/backend';
+import { PATHS, monthDecoder, dayDecoder, planDecoder, deletedDecoder, type Plan } from '../../services/backend';
+import { LEARNING_PATHS, stagesDecoder, topicsDecoder } from '../../services/learningApi';
+import { selectCalendarStage, type CalendarTarget } from '../../services/calendarTargets';
 import { COLORS } from '../../constants/theme';
 const two = (v: number) => String(v).padStart(2, '0');
 const seoulToday = () => { const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const get = (key: string) => parts.find(v => v.type === key)?.value; return `${get('year')}-${get('month')}-${get('day')}`; };
-interface Target { topicId: string; stageId: string | null; conceptId: string | null; label: string }
-interface Draft { id: string | null; date: string; goal: string; planType: 'NEW_LEARNING' | 'REVIEW'; target: Target | null }
+interface Draft { id: string | null; date: string; goal: string; planType: 'NEW_LEARNING' | 'REVIEW'; topicId: string | null; target: CalendarTarget | null }
 export default function CalendarScreen() {
   const [date, setDate] = useState(seoulToday);
   const [month, setMonth] = useState(() => date.slice(0, 7));
@@ -24,18 +25,27 @@ export default function CalendarScreen() {
   const [validation, setValidation] = useState('');
   const monthly = useBackend(`${PATHS.calendar}?month=${month}`, monthDecoder);
   const daily = useBackend(`${PATHS.calendar}/days/${date}`, dayDecoder);
-  const history = useBackend(`${PATHS.history}?page=1&pageSize=100`, historyDecoder);
+  // 편집기를 열었을 때만 공개 주제를 읽고, 선택한 주제의 단계 한 목록만 조회합니다.
+  const topics = useBackend(draft ? LEARNING_PATHS.topics : null, topicsDecoder);
+  const stages = useBackend(draft?.topicId ? LEARNING_PATHS.stages(draft.topicId) : null, stagesDecoder);
   const action = useBackendAction();
   const [year, monthNumber] = month.split('-').map(Number);
   const cells = useMemo(() => { const first = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7; const length = new Date(year, monthNumber, 0).getDate(); return Array.from({ length: Math.ceil((first + length) / 7) * 7 }, (_, i) => i >= first && i < first + length ? i - first + 1 : null); }, [year, monthNumber]);
-  // 일정과 실제 학습 기록이 참조하는 서버 ID만 선택지로 사용합니다. 정식 목록 API 추가 전의 제한입니다.
-  const targets: Target[] = [];
-  const append = (t: Target) => { if (!targets.some(v => v.stageId === t.stageId && v.conceptId === t.conceptId)) targets.push(t); };
-  for (const p of daily.data?.schedules ?? []) if (p.topic && (p.stageId || p.conceptId)) append({ topicId: p.topic.topicId, stageId: p.stageId, conceptId: p.conceptId, label: p.topic.title });
-  for (const r of history.data?.items ?? []) if (r.topic && r.stage) append({ topicId: r.topic.topicId, stageId: r.stage.stageId, conceptId: null, label: r.stage.title });
-  const refresh = () => { monthly.reload(); daily.reload(); history.reload(); };
+  const refresh = () => { monthly.reload(); daily.reload(); };
   const move = (delta: number) => { const d = new Date(year, monthNumber - 1 + delta, 1); const m = `${d.getFullYear()}-${two(d.getMonth() + 1)}`; setMonth(m); setDate(`${m}-01`); setNotice(''); setConfirmDelete(null); };
-  const edit = (p?: Plan) => { setNotice(''); setValidation(''); setDraft({ id: p?.planId ?? null, date: p?.scheduledDate ?? date, goal: p?.goal ?? '', planType: p?.planType === 'REVIEW' ? 'REVIEW' : 'NEW_LEARNING', target: p?.topic ? { topicId: p.topic.topicId, stageId: p.stageId, conceptId: p.conceptId, label: p.topic.title } : targets[0] ?? null }); };
+  const edit = (p?: Plan) => {
+    setNotice('');
+    setValidation('');
+    // 기존의 개념·단계 연결을 보존하고, 새 일정은 사용자가 대상을 직접 고릅니다.
+    const topic = p?.topic;
+    const target = topic && (p.stageId || p.conceptId)
+      ? { topicId: topic.topicId, stageId: p.stageId, conceptId: p.conceptId, label: topic.title } : null;
+    setDraft({
+      id: p?.planId ?? null, date: p?.scheduledDate ?? date, goal: p?.goal ?? '',
+      planType: p?.planType === 'REVIEW' ? 'REVIEW' : 'NEW_LEARNING',
+      topicId: target?.topicId ?? null, target,
+    });
+  };
   const save = async () => {
     if (!draft || action.busy) return;
     const goal = draft.goal.trim();
@@ -49,8 +59,23 @@ export default function CalendarScreen() {
     <LerenInput label="학습 목표" value={draft.goal} onChangeText={goal => setDraft({ ...draft, goal })} hint="1~30자" />
     <LerenInput label="날짜" value={draft.date} onChangeText={value => setDraft({ ...draft, date: value })} placeholder="YYYY-MM-DD" />
     <Row><Chip label="새 학습" active={draft.planType === 'NEW_LEARNING'} onPress={() => setDraft({ ...draft, planType: 'NEW_LEARNING' })} /><Chip label="복습" active={draft.planType === 'REVIEW'} onPress={() => setDraft({ ...draft, planType: 'REVIEW' })} /></Row>
-    <Heading>실제 학습 대상</Heading>{draft.target && <Body>선택: {draft.target.label}</Body>}{targets.map((t, i) => <LerenButton key={i} title={t.label} variant="secondary" onPress={() => setDraft({ ...draft, target: t })} />)}
-    {!draft.target && <Notice>저장 API는 연결했으나 선택할 실제 학습 대상이 없습니다. 정식 학습 목록 API와 주제·단계 데이터가 준비되어야 새 일정을 저장할 수 있습니다.</Notice>}
+    <Heading>학습 대상</Heading>
+    {draft.target && <Body>선택: {draft.target.label}</Body>}
+    {topics.status !== 'success' && <ApiStatus resource={topics} label="학습 주제" />}
+    {topics.data?.items.length === 0 && <Notice>현재 공개된 학습 주제가 없습니다.</Notice>}
+    {topics.data?.items.map(topic => <Chip key={topic.topicId} label={topic.title} active={draft.topicId === topic.topicId} onPress={() => {
+      if (!action.busy && draft.topicId !== topic.topicId) setDraft({ ...draft, topicId: topic.topicId, target: null });
+    }} />)}
+    {draft.topicId && <>
+      {stages.status !== 'success' && <ApiStatus resource={stages} label="학습 단계" />}
+      {stages.data?.items.length === 0 && <Notice>이 주제에 공개된 단계가 없습니다.</Notice>}
+      {stages.data?.items.map(stage => <Chip key={stage.stageId} label={stage.title} active={draft.target?.stageId === stage.stageId} onPress={() => {
+        if (action.busy || !draft.topicId) return;
+        const target = selectCalendarStage(draft.topicId, stage.stageId, stages.data);
+        if (target) { setDraft({ ...draft, target }); setValidation(''); }
+      }} />)}
+    </>}
+    {!draft.target && <Body muted>학습 주제와 단계를 선택해 주세요.</Body>}
     {!!validation && <Notice tone="error">{validation}</Notice>}{!!action.error && <Notice tone="error">저장 실패: {action.error}</Notice>}
     <LerenButton title="서버에 일정 저장" loading={action.busy} disabled={action.busy || !draft.target} onPress={save} /><LerenButton title="취소" variant="secondary" disabled={action.busy} onPress={() => setDraft(null)} />
     <Body muted>백엔드는 일정 시간을 받지 않습니다. 휴대폰 알림 발송은 별도 기능입니다.</Body>
@@ -66,8 +91,6 @@ export default function CalendarScreen() {
     <HistoryRecords key={date} records={daily.data?.learningRecords ?? []} />
     {daily.data?.schedules.map(p => <LerenCard key={p.planId} title={p.goal} description={`${p.topic?.title ?? '학습 주제 없음'} · ${p.planType === 'REVIEW' ? '복습' : '새 학습'}`}><LerenButton title="일정 수정" variant="secondary" disabled={action.busy} onPress={() => edit(p)} />{confirmDelete === p.planId ? <><Notice>이 일정을 서버에서 삭제할까요?</Notice><LerenButton title="삭제 확인" loading={action.busy} disabled={action.busy} onPress={() => remove(p.planId)} /><LerenButton title="삭제 취소" variant="secondary" onPress={() => setConfirmDelete(null)} /></> : <LerenButton title="일정 삭제" variant="secondary" onPress={() => setConfirmDelete(p.planId)} />}</LerenCard>)}
     <LerenButton title="학습 일정 추가" onPress={() => edit()} />
-    <ApiStatus resource={history} label="일정에 사용할 학습 대상" empty={targets.length === 0} />
-    {targets.length === 0 && <Body muted>현재 조회한 기록·일정에는 선택 가능한 단계·개념이 없습니다. 학습 대상은 경제 탐험에서 확인할 수 있으며, 일정에서 전체 학습 대상을 선택하는 기능은 별도 연결이 필요합니다.</Body>}
   </Screen>;
 }
 const s = StyleSheet.create({ grid: { flexDirection: 'row', flexWrap: 'wrap' }, day: { width: `${100 / 7}%`, textAlign: 'center', padding: 4 }, cell: { width: `${100 / 7}%`, minHeight: 54 }, date: { alignItems: 'center', paddingVertical: 5, borderRadius: 8 }, selected: { backgroundColor: COLORS.soft } });
