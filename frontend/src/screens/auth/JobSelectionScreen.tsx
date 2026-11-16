@@ -12,6 +12,8 @@ import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
 import { JOB_PATHS, jobsDecoder, jobChangeDecoder, initialJobDecoder, type CharacterJob } from '../../services/jobApi';
+import { useAuth } from '../../context/AuthContext';
+import { backendRequest, PATHS, memberDecoder } from '../../services/backend';
 
 export type JobId = 'warrior' | 'mage' | 'archer';
 export interface SaveJobResult { success: boolean }
@@ -46,6 +48,7 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
   const initialSelection = profile.status === 'success' && profile.data?.characterClass === null;
   const selected = JOBS.find(job => job.id === selection);
   const serverJob = selection ? findJob(jobs.data?.items ?? [], selection) : null;
+  const { session } = useAuth();
 
   const submit = async () => {
     if (!selection || busy || action.busy || previewOnly) return;
@@ -58,9 +61,18 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
         if (profile.status !== 'success') { setError('회원 정보를 확인한 뒤 다시 시도해 주세요.'); return; }
         const result = initialSelection
           ? await action.run(JOB_PATHS.initial, initialJobDecoder, 'PATCH', { classCode: serverJob.classCode })
-          : await action.run(JOB_PATHS.change, jobChangeDecoder, 'PATCH', { classId: serverJob.classId });
-        if (!result) { setError('직업 변경 요청에 실패했습니다.'); return; }
+          : await action.run(JOB_PATHS.change, jobChangeDecoder, 'PATCH', { classCode: serverJob.classCode });
+        if (!result) { setError('직업 저장 요청에 실패했습니다.'); return; }
         profile.reload();
+        if (!session) { setError('로그인 정보를 확인할 수 없습니다.'); return; }
+        try {
+          const updated = await backendRequest(session.accessToken, PATHS.me, memberDecoder);
+          if (updated.characterClass?.classCode !== serverJob.classCode) {
+            setError('저장된 직업 정보를 확인하지 못했습니다.'); return;
+          }
+        } catch {
+           setError('저장 후 회원 정보를 확인하지 못했습니다. 마이페이지에서 현재 직업을 확인해 주세요.'); return;
+       }
       }
       if (onComplete) onComplete(selection);
       else router.replace('/home');
