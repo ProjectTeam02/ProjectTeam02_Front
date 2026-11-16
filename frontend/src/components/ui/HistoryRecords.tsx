@@ -5,9 +5,10 @@ import { ApiStatus } from './ApiStatus';
 import LerenCard from '../common/LerenCard';
 import LerenButton from '../common/LerenButton';
 import { useBackend } from '../../hooks/useBackend';
-import { PATHS, detailDecoder, type HistoryRecord } from '../../services/backend';
-export function RecordDetail({ record }: { record: HistoryRecord }) {
-  const detail = useBackend(`${PATHS.history}/${encodeURIComponent(record.recordType)}/${encodeURIComponent(record.recordId)}`, detailDecoder);
+import { detailDecoder, type HistoryRecord } from '../../services/backend';
+import { learningHistoryDetailPath, type LearningRecordRef } from '../../services/learningHistoryPath';
+export function RecordDetail({ record }: { record: LearningRecordRef }) {
+  const detail = useBackend(learningHistoryDetailPath(record), detailDecoder);
   return <><ApiStatus resource={detail} label="학습 상세" empty={detail.data?.submissions.length === 0} />{detail.data?.submissions.map(s => <LerenCard key={s.submissionId} title={s.questionText ?? '문제 본문 없음'} description={`선택한 답: ${s.selectedAnswer ?? '없음'} · ${s.isCorrect ? '정답' : '오답'}\n${s.explanation ?? '해설 데이터 없음'}`} />)}</>;
 }
 export function HistoryRecords({ records }: { records: HistoryRecord[] }) {
