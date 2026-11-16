@@ -1,12 +1,5 @@
 /** 조회 가능한 프로필만 표시합니다. 닉네임 수정 API가 없어 로컬 변경을 서버 저장으로 안내하지 않습니다. */
-/*import Screen from '../../components/ui/Screen';
-import { ApiStatus, Unconnected } from '../../components/ui/ApiStatus';
-import LerenCard from '../../components/common/LerenCard';
-import { useBackendProfile } from '../../context/BackendProfileContext';
-export default function ProfileEditScreen() { const profile = useBackendProfile(); return <Screen title="프로필" back tabs><ApiStatus resource={profile} label="프로필 조회" />{profile.data && <LerenCard title={profile.data.nickname} description={profile.data.email ?? undefined} />}<Unconnected>닉네임·프로필 수정 API가 없습니다. 현재 화면에서는 조회만 가능합니다.</Unconnected></Screen>; }
-*/
-
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { router } from 'expo-router';
 import Screen from '../../components/ui/Screen';
 import { ApiStatus } from '../../components/ui/ApiStatus';
@@ -29,18 +22,14 @@ export default function ProfileEditScreen() {
   const profile = useBackendProfile();
   const { setNickname } = useLearningProgress();
   const action = useBackendAction();
-  const [nickname, setNicknameInput] = useState('');
+  const [nicknameInput, setNicknameInput] = useState<string | null>(null);
   const [savedNickname, setSavedNickname] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const originalNickname = profile.data?.nickname ?? '';
+  const nickname = nicknameInput ?? originalNickname;
   const email = profile.data?.email;
   const validNickname = nickname.trim().length >= 1 && nickname.trim().length <= 30;
   const changed = nickname.trim() !== originalNickname;
-
-  /** 서버에서 프로필을 불러오면 현재 닉네임을 입력창에 표시합니다. */
-  useEffect(() => {
-    if (profile.data && savedNickname === null) setNicknameInput(profile.data.nickname);
-  }, [profile.data?.userId, profile.data?.nickname, savedNickname]);
 
   /** 서버에 닉네임을 저장하고 실제 저장된 값을 화면에 반영합니다. */
   const save = async () => {
@@ -60,7 +49,7 @@ export default function ProfileEditScreen() {
         <LerenInput label="닉네임" value={nickname} onChangeText={value => { setNicknameInput(value); setSubmitted(false); }}
           placeholder="닉네임을 입력해 주세요" editable={!action.busy}
           hint="학습 화면에서 사용할 이름이에요."
-          error={submitted && !validNickname ? '닉네임은 1~30자로 입력해 주세요.' : ''} />
+          error={(nicknameInput !== null || submitted) && !validNickname ? '닉네임은 1~30자로 입력해 주세요.' : ''} />
         <LerenCard title="이메일" description={email ?? '등록된 이메일이 없습니다.'} variant="info" />
         <Notice>로그인에 사용하는 이메일은 확인만 할 수 있어요.</Notice>
         {!!action.error && <Notice tone="error">{action.error}</Notice>}

@@ -4,7 +4,7 @@
  * 미구현: 실제 휴대폰 푸시 알림 발송 및 기기 알림 권한 요청·상태 조회
  * 주의: 현재는 백엔드에 알림 설정만 저장하며, 실제 휴대폰 알림이 발송되지는 않습니다.
  */
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Screen from '../../components/ui/Screen';
 import { Chip, Notice, Row } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
@@ -43,21 +43,14 @@ const toServerTime = (value: string): string | null => {
 export default function NotificationSettingsScreen() {
   const settings = useBackend(PATH, settingDecoder);
   const action = useBackendAction();
-  const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [time, setTime] = useState('');
+  const [editedEnabled, setEnabled] = useState<boolean | null>(null);
+  const [editedTime, setTime] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [initialized, setInitialized] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const initialized = settings.data !== null;
+  const enabled =editedEnabled ?? settings.data?.reminderEnabled ?? null;
+  const time =editedTime ?? (settings.data?.reminderTime ? toDisplayTime(settings.data.reminderTime): '오후 8:00');
   const serverTime = toServerTime(time);
-
-  /** 최초 조회한 서버 설정을 입력창에 반영합니다. */
-  useEffect(() => {
-    if (settings.data && !initialized) {
-      setEnabled(settings.data.reminderEnabled);
-      setTime(settings.data.reminderTime ? toDisplayTime(settings.data.reminderTime) : '오후 8:00');
-      setInitialized(true);
-    }
-  }, [settings.data, initialized]);
 
   /** 학습 알림 켜기·끄기 및 시간을 서버에 저장합니다. */
   const save = async () => {
@@ -88,7 +81,7 @@ export default function NotificationSettingsScreen() {
       <LerenInput label="학습 알림 시간" value={time} onChangeText={value => { setTime(value); setSaved(false); }}
         placeholder="오후 8:00" editable={enabled === true && !action.busy}
         hint="오전 9:00 또는 오후 8:00 형식으로 입력해 주세요."
-        error={submitted && enabled === true && !serverTime ? '알림 시간을 올바르게 입력해 주세요.' : ''} />
+        error={(editedTime !== null || submitted) && enabled === true && !serverTime ? '알림 시간을 올바르게 입력해 주세요.' : ''} />
       {enabled === false && <LerenCard title="기기 알림 권한 안내" description="기기 설정에서 LEREN 알림을 허용하면 학습 시간에 알림을 받을 수 있어요." variant="reward" />}
       <LerenCard title="알림 권한" description="기기 설정에서 알림을 허용해 주세요. 실제 기기 권한 조회는 아직 연결되지 않았습니다." />
       {!!action.error && <Notice tone="error">{action.error}</Notice>}
