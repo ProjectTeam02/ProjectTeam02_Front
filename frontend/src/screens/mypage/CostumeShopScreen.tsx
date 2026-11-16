@@ -46,7 +46,7 @@ export default function CostumeShopScreen() {
       if (result) {
         request.current = null;
         setMessage(`${item.name} 구매가 완료되었습니다. 남은 코인: ${result.coinBalance.toLocaleString()}개`);
-        shop.reload(); profile.reload();
+        shop.reload(); detail.reload(); profile.reload();
       }
     } finally { setPendingItemId(null); }
   };
