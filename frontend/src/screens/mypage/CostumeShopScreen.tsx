@@ -10,6 +10,8 @@ import LerenCard from '../../components/common/LerenCard';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
 import { COSTUME_PATHS, costumesDecoder, costumeDecoder, purchaseDecoder, type Costume } from '../../services/costumeApi';
+import LerenCharacter from '../../components/common/LerenCharacter';
+import { getCostumeImage } from '../../constants/costumeImages';
 
 export default function CostumeShopScreen() {
   const [page, setPage] = useState(1);
@@ -61,6 +63,7 @@ export default function CostumeShopScreen() {
     {detailId && <LerenCard title="코스튬 상세">
       <ApiStatus resource={detail} label="코스튬 상세" />
       {detail.data && <>
+        <LerenCharacter source={getCostumeImage(detail.data.name)} size={120} accessibilityLabel={detail.data.name} />
         <Body>{detail.data.name}</Body>
         <Body>{detail.data.description ?? '설명이 없습니다.'}</Body>
         {!!detail.data.flavorText && <Body muted>{detail.data.flavorText}</Body>}
@@ -74,6 +77,7 @@ export default function CostumeShopScreen() {
     {shop.data?.total === 0 && <Empty title="판매 중인 코스튬이 없어요" description="새로운 코스튬이 등록되면 이곳에서 확인할 수 있어요." />}
     {filteredItems.map(item => <LerenCard key={item.itemId} title={item.name}
       description={`${item.description ?? '코스튬 설명이 없습니다.'}\n분류: ${item.category}\n가격: ${item.priceCoin === null ? '구매 불가' : `${item.priceCoin.toLocaleString()}코인`}`}>
+      <LerenCharacter source={getCostumeImage(item.name)} size={88} accessibilityLabel={item.name} />
       <Body muted>{item.owned ? '이미 보유한 코스튬' : '구매 가능한 코스튬'}</Body>
       <LerenButton title="상세 보기" variant="secondary" onPress={() => setDetailId(item.itemId)} />
       <LerenButton title={item.owned ? '보유 중' : item.priceCoin === null ? '구매 불가' : '구매하기'}
