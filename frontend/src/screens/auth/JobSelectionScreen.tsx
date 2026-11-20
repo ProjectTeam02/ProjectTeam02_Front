@@ -74,8 +74,7 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
            setError('저장 후 회원 정보를 확인하지 못했습니다. 마이페이지에서 현재 직업을 확인해 주세요.'); return;
        }
       }
-      if (onComplete) onComplete(selection);
-      else router.replace('/home');
+      if (onComplete) { onComplete(selection);} else if (initialSelection) {router.replace('/home');} else {router.replace('/mypage');}
     } catch { setError('직업을 저장하지 못했습니다. 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   };

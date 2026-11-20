@@ -1,4 +1,4 @@
-/** 조회 가능한 프로필만 표시합니다. 닉네임 수정 API가 없어 로컬 변경을 서버 저장으로 안내하지 않습니다. */
+/** 프로필 조회 및 닉네임 수정 API를 연결하고 서버 저장 결과를 표시합니다. */
 import { useState } from 'react';
 import { router } from 'expo-router';
 import Screen from '../../components/ui/Screen';

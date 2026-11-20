@@ -33,7 +33,7 @@ export default function WardrobeScreen() {
     } finally { setPendingItemId(null); }
   };
 
-  return <Screen title="직업·장착 코스튬" back tabs>
+  return <Screen title="내 옷장" back tabs>
     <ConfirmDialog visible={confirmItem !== null} title="코스튬 장착" message={confirmItem ? `${confirmItem.name}을(를) 장착할까요?` : ''} confirmLabel="장착하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmEquip(confirmItem); }} />
     <ApiStatus resource={profile} label="직업 조회" />
     {profile.data && <LerenCard title={profile.data.characterClass?.name ?? '직업 데이터 없음'}
@@ -48,7 +48,7 @@ export default function WardrobeScreen() {
     {inventory.data?.items.map(item => {
   const equipped = inventory.data?.equipped.some(row => row.itemId === item.itemId) ?? false;
       return <LerenCard key={item.itemId} title={item.name}
-        description={`${item.description ?? '코스튬 설명이 없습니다.'}\n분류: ${item.category}`}>
+        description={item.description ?? '코스튬 설명이 없습니다.'}>
         <LerenButton title={equipped ? '장착 중' : '장착하기'} variant={equipped ? 'secondary' : 'primary'}
           disabled={equipped || action.busy || pendingItemId !== null} loading={pendingItemId === item.itemId}
           onPress={() => equip(item)} />

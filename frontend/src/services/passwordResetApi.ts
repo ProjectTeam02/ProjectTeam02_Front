@@ -1,4 +1,3 @@
-/** 파일 수정중임*/
 /** 로그인하지 않은 사용자도 사용할 수 있는 비밀번호 재설정 API입니다. */
 import { BackendError, object } from './backend.ts';
 import { getAuthenticatedApiBaseUrl } from './apiConfig.ts';
@@ -13,10 +12,13 @@ const request = async <T,>(path: string, body: Record<string, string>, decode: (
       body: JSON.stringify(body),
     });
     const payload = object(await response.json());
-    if (!response.ok || payload.success !== true) throw new BackendError(
-      typeof payload.message === 'string' ? payload.message : '비밀번호 재설정 요청에 실패했습니다.',
-      response.status, typeof payload.code === 'string' ? payload.code : '',
-    );
+    if (!response.ok || payload.success !== true) {
+      if (response.status === 503) throw new BackendError('현재 비밀번호 재설정 이메일 서비스를 이용할 수 없습니다. 잠시 후 다시 시도해 주세요.', 503, 'PASSWORD_RESET_UNAVAILABLE');
+      throw new BackendError(
+       typeof payload.message === 'string' ? payload.message : '비밀번호 재설정 요청에 실패했습니다.',
+       response.status, typeof payload.code === 'string' ? payload.code : '',
+      );
+    }
     return decode(payload.data);
   } catch (error) {
     if (error instanceof BackendError) throw error;
