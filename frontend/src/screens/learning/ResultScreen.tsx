@@ -11,8 +11,8 @@ import { useBackendProfile } from '../../context/BackendProfileContext';
 import { isLearningId, LEARNING_PATHS, resultDecoder, stageDetailDecoder } from '../../services/learningApi';
 
 export default function ResultScreen() {
-  const { attemptId } = useLocalSearchParams<{ attemptId?: string }>();
-  const result = useLearningQuery(isLearningId(attemptId) ? LEARNING_PATHS.result(attemptId) : null, resultDecoder);
+  const { attemptId, kind } = useLocalSearchParams<{ attemptId?: string; kind?: string }>();
+  const result = useLearningQuery(isLearningId(attemptId) ? (kind === 'boss' ? LEARNING_PATHS.bossAttempt(attemptId) : LEARNING_PATHS.result(attemptId)) : null, resultDecoder);
   const stage = useLearningQuery(result.data ? LEARNING_PATHS.stage(result.data.stageId) : null, stageDetailDecoder);
   const profile = useBackendProfile();
   const reloadProfile = profile.reload;
@@ -21,18 +21,19 @@ export default function ResultScreen() {
   return <Screen title="학습 결과" tabs>
     <ApiStatus resource={result} label="저장된 결과" />
     {result.data && <>
-      <LerenCard variant={result.data.status === 'PASSED' ? 'success' : 'error'}>
-        <Heading>{result.data.status === 'PASSED' ? '학습 완료' : '다시 도전해 볼까요?'}</Heading>
+      <LerenCard variant={result.data.status === 'PASSED' ? 'info' : 'error'}>
+        <Heading>{result.data.status === 'PASSED' ? '몬스터를 물리쳤어요!' : '다시 도전해 볼까요?'}</Heading>
         {stage.data && <Body>{stage.data.title}</Body>}
         <Body>제출 {result.data.submittedCount}/{result.data.maxQuestionCount} · 정답 {result.data.correctCount}개 · 남은 HP {result.data.hp}</Body>
       </LerenCard>
-      <Notice>{result.data.rewardGranted ? '최초 통과 보상이 서버에서 지급 처리되었습니다.' : '이 응시에서 추가 지급된 보상은 없습니다.'}</Notice>
+      <Notice>{result.data.rewardGranted ? '첫 통과 보상을 받았어요.' : '이 응시에서 추가 지급된 보상은 없습니다.'}</Notice>
       <ApiStatus resource={profile} label="최신 성장·코인" />
-      {profile.data && <Body>전체 EXP {profile.data.totalExp ?? '정보 없음'} · 경제 EXP {profile.data.economyExp ?? '정보 없음'} · 보유 코인 {profile.data.coinBalance ?? '정보 없음'}</Body>}
-      <LerenButton title="다시 도전하기" variant="secondary" onPress={() => router.replace({ pathname: '/quiz', params: { stageId: result.data!.stageId } })} />
+      {profile.data && <LerenCard title="나의 성장" variant="reward"><Body>전체 EXP {profile.data.totalExp ?? '—'} · 경제 EXP {profile.data.economyExp ?? '—'}</Body><Body>보유 코인 {profile.data.coinBalance?.toLocaleString() ?? '—'}</Body></LerenCard>}
+      <LerenButton title="문항별 결과 보기" variant="secondary" onPress={() => router.push({ pathname: '/learning-detail', params: { recordType: 'LEARNING', recordId: attemptId } })} />
+      <LerenButton title="다시 도전하기" variant="secondary" onPress={() => router.replace({ pathname: '/quiz', params: { stageId: result.data!.stageId, mode: 'retry' } })} />
       {stage.data && <LerenButton title="다음 학습 단계 보기" onPress={() => router.replace({ pathname: '/steps', params: { topicId: stage.data!.topicId } })} />}
     </>}
-    <LerenButton title="학습 이력 보기" variant="secondary" onPress={() => router.push('/statistics')} />
+    <LerenButton title="학습 이력 보기" variant="secondary" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'history' } })} />
     <LerenButton title="홈으로" variant="secondary" onPress={() => router.replace('/home')} />
   </Screen>;
 }

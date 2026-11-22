@@ -105,7 +105,7 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
         loading={busy || action.busy} onPress={() => { void submit(); }} />
       {!!error && <LerenButton title="직업 다시 고르기" variant="secondary"
         onPress={() => { setSelection(null); setError(''); }} />}
-      <Text style={styles.hint}>직업 선택은 서버에 저장되며, 저장 성공 후 화면을 이동합니다.</Text>
+      <Text style={styles.hint}>직업은 나중에 마이페이지에서 바꿀 수 있어요.</Text>
     </>}
   </Screen>;
 }

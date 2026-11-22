@@ -1,7 +1,8 @@
 /** 실제 전체·개념별 학습 통계와 페이지별 학습 이력을 표시합니다. */
 import { useState } from 'react';
+import { useLocalSearchParams } from 'expo-router';
 import Screen from '../../components/ui/Screen';
-import { Chip, Row, Progress, Empty, LinkRow } from '../../components/ui/Primitives';
+import { Body, Heading, Chip, Row, Progress, Empty, LinkRow } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import { HistoryRecords } from '../../components/ui/HistoryRecords';
 import LerenButton from '../../components/common/LerenButton';
@@ -11,7 +12,8 @@ import { historyDecoder, PATHS } from '../../services/backend';
 import { STATISTICS_PATHS, overallDecoder, conceptsDecoder } from '../../services/statisticsApi';
 
 export default function StatisticsScreen() {
-  const [tab, setTab] = useState(0);
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = useState(params.tab === 'concepts' ? 1 : params.tab === 'history' ? 2 : 0);
   const [page, setPage] = useState(1);
   const overall = useBackend(tab === 0 ? STATISTICS_PATHS.overall : null, overallDecoder);
   const concepts = useBackend(tab !== 2 ? STATISTICS_PATHS.concepts : null, conceptsDecoder);
@@ -24,14 +26,15 @@ export default function StatisticsScreen() {
     <Row>{['전체', '개념별', '학습 이력'].map((title, i) => <Chip key={title} label={title} active={i === tab} onPress={() => setTab(i)} />)}</Row>
     {tab === 0 ? <><ApiStatus resource={overall} label="전체 학습 통계" />
       {overall.data && <>
+        <LerenCard variant="info" title="나의 학습 성과" description="응시 통과율">
+          <Heading>{overall.data.attempts ? `${Math.round(overall.data.passedAttempts / overall.data.attempts * 100)}%` : '—'}</Heading>
+          <Progress value={overall.data.attempts ? overall.data.passedAttempts / overall.data.attempts : 0} />
+          <Body muted>통과 {overall.data.passedAttempts}회 · 미통과 {overall.data.failedAttempts}회</Body>
+        </LerenCard>
         <Row>
           <LerenCard title={`${overall.data.completedStages}개`} description="완료한 단계" style={{ flex: 1 }} />
           <LerenCard title={`${overall.data.attempts}회`} description="총 응시" style={{ flex: 1 }} />
-          <LerenCard title={overall.data.attempts ? `${Math.round(overall.data.passedAttempts / overall.data.attempts * 100)}%` : '—'} description="응시 통과율" style={{ flex: 1 }} />
         </Row>
-        <LerenCard title="학습 응시 현황" description={`통과 ${overall.data.passedAttempts}회 · 실패 ${overall.data.failedAttempts}회`}>
-          <Progress value={overall.data.attempts ? overall.data.passedAttempts / overall.data.attempts : 0} />
-        </LerenCard>
       </>}
       <ApiStatus resource={concepts} label="개념별 성취도" empty={items.length === 0} />
       {studied.length > 0 && <LerenCard title="개념별 성취도">

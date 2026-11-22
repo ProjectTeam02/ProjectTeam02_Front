@@ -33,7 +33,7 @@ function AuthenticatedScreens() {
       <Stack.Screen name="jobs" />
       <Stack.Screen name="auth/callback" />
       <Stack.Protected guard={!!session}>
-        {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications', 'connections'].map((name) => <Stack.Screen key={name} name={name} />)}
+        {['home', 'explore', 'steps', 'lesson', 'quiz', 'result', 'learning-detail', 'review', 'tutor', 'mypage', 'calendar', 'statistics', 'wardrobe', 'shop', 'settings', 'profile', 'notifications', 'connections'].map((name) => <Stack.Screen key={name} name={name} />)}
       </Stack.Protected>
     </Stack>
   </LearningProgressProvider></BackendProfileProvider>;

@@ -77,7 +77,6 @@ export default function SignupScreen({ onSignup, onLogin }: SignupScreenProps = 
       {!!error && <Notice tone="error">{error}</Notice>}
       <LerenButton title={busy ? '계정을 만드는 중...' : '계정 만들기'} disabled={!ready || busy} loading={busy} onPress={() => { void submit(); }} />
       <LerenLinkCard title="이미 계정이 있나요?" subtitle="로그인" onPress={goToLogin} />
-      <Text style={styles.hint}>회원가입 정보는 설정된 백엔드로 전송되며, 서버 처리 후 가입 결과를 알려드려요.</Text>
     </Screen>
   );
 }

@@ -100,7 +100,8 @@ function ReviewContent() {
       const previousWrong = resultMode && !isWrong && wrongQuestionIds.includes(item.id);
       return <LinkRow key={item.id} title={item.concept} subtitle={`${isWrong ? '오답' : '정답'}${previousWrong ? ' · 이전 오답 기록' : ''}${flaggedQuestionIds.includes(item.id) ? ' · 헷갈림' : ''} · 개념 다시 보기`} onPress={() => start(item.id)} />;
     }) : <Empty title={filter === '전체' ? '복습할 문제가 없어요' : `${filter} 문항이 없어요`} description="퀴즈를 풀고 헷갈리는 문제에 체크해 보세요." action="경제 탐험으로" onPress={() => router.push('/explore')} />}
-    <LinkRow title="개념별 학습 통계" subtitle="강점과 취약 개념 보기" onPress={() => router.push('/statistics')} />
+    {questions.length > 0 && <LerenButton title={`${questions.length}문제 복습 시작`} onPress={() => start(questions[0].id)} />}
+    <LinkRow title="개념별 학습 통계" subtitle="강점과 취약 개념 보기" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'concepts' } })} />
   </Screen>;
 }
 

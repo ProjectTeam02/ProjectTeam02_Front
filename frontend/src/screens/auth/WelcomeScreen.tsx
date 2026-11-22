@@ -74,7 +74,6 @@ export default function WelcomeScreen() {
         </Pressable>
       </View>
       <Text style={styles.footer}>오늘의 경제 지식이 내일의 힘이 돼요.</Text>
-      <Text style={styles.preview}>이메일 인증과 일반 퀴즈의 채점·학습 결과는 서버에 저장됩니다.</Text>
     </Screen>
   );
 }
@@ -94,5 +93,4 @@ const styles = StyleSheet.create({
   kakao: { minHeight: 48, borderRadius: 12, backgroundColor: '#FEE500', alignItems: 'center', justifyContent: 'center' },
   kakaoLabel: { ...TYPOGRAPHY.label, color: COLORS.primary, textAlign: 'center' },
   footer: { ...TYPOGRAPHY.small, color: COLORS.muted, textAlign: 'center', marginTop: 8, marginBottom: 24 },
-  preview: { ...TYPOGRAPHY.micro, color: COLORS.muted, textAlign: 'center' },
 });

@@ -5,17 +5,10 @@ import React from 'react';
 import type { PressableProps, StyleProp, ViewStyle } from 'react-native';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
-const C = {
-  primary: '#1D3F91',
-  ink: '#182842',
-  muted: '#68778E',
-  line: '#DCE5F0',
-  success: '#248565',
-  successBg: '#E8F6EF',
-};
+import { COLORS as C } from '../../constants/theme';
 
 // 지도 화면이 계산해 전달하는 UI 상태이며 서버 진행도 Enum과는 별도입니다.
-export type StageStatus = 'locked' | 'complete' | 'available' | 'active';
+export type StageStatus = 'locked' | 'complete' | 'available' | 'active' | 'overview';
 
 export interface StageCardProps {
   number: number;
@@ -43,7 +36,9 @@ export default function StageCard({
   // 잠금 사유 또는 완료/진행 문구를 하나의 카드 설명으로 정리합니다.
   let description = `잠김 · ${requirement || '이전 지역 완료 필요'}`;
 
-  if (isComplete) {
+  if (status === 'overview') {
+    description = progress || '단계 보기';
+  } else if (isComplete) {
     description = '✓ 완료';
   } else if (isAvailable) {
     description = '학습 가능';
@@ -58,7 +53,8 @@ export default function StageCard({
       accessibilityLabel={`STAGE ${number}, ${title.replace(/\n/g, ' ')}, ${description}`}
       style={[
         styles.card,
-        (isAvailable || isActive) && styles.activeCard,
+        isAvailable && styles.activeCard,
+        isActive && styles.currentCard,
         isComplete && styles.completeCard,
         style,
       ]}
@@ -66,18 +62,20 @@ export default function StageCard({
       <Text
         style={[
           styles.stageNumber,
-          (isActive || isAvailable) && styles.primaryText,
+          isAvailable && styles.primaryText,
+          isActive && styles.goldText,
         ]}
       >
         STAGE {number}
       </Text>
 
-      <Text style={styles.title}>{title}</Text>
+      <Text numberOfLines={2} style={[styles.title, isActive && styles.whiteText]}>{title}</Text>
 
-      <Text
+      <Text numberOfLines={1}
         style={[
           styles.description,
-          (isActive || isAvailable) && styles.primaryText,
+          isAvailable && styles.primaryText,
+          isActive && styles.whiteText,
           isComplete && styles.completeText,
         ]}
       >
@@ -100,6 +98,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 7,
   },
+  currentCard: { backgroundColor: C.primary, borderColor: C.surface, borderWidth: 2 },
+  whiteText: { color: C.surface }, goldText: { color: '#FFE28B' },
   activeCard: {
     borderColor: C.primary,
   },

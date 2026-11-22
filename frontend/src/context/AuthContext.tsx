@@ -10,6 +10,7 @@ import { clearKakaoWebFlow, getKakaoWebFlow } from '../services/kakao';
 interface AuthState {
   session: LoginResult | null;
   sessionRevision: number;
+  returningName?: string;
   signIn: (email: string, password: string) => Promise<void>;
   startKakaoSignIn: () => Promise<void>;
   finishKakaoSignIn: () => Promise<void>;
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<LoginResult | null>(null);
   const [sessionRevision, setSessionRevision] = useState(0);
+  const [returningName, setReturningName] = useState<string>();
   const pending = useRef(false);
   const kakaoCompletion = useRef<Promise<void> | null>(null);
 
@@ -74,12 +76,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await logout(session.accessToken);
       kakaoCompletion.current = null;
+      setReturningName(session.user.nickname);
       setSession(null);
       setSessionRevision((value) => value + 1);
     } finally { pending.current = false; }
   };
 
-  return <AuthContext.Provider value={{ session, sessionRevision, signIn, startKakaoSignIn, finishKakaoSignIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ session, returningName, sessionRevision, signIn, startKakaoSignIn, finishKakaoSignIn, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

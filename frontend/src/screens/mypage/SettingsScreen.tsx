@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import Screen from '../../components/ui/Screen';
+import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { LinkRow, Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
@@ -33,12 +34,7 @@ export default function SettingsScreen() {
     <LinkRow title="학습 알림" subtitle="학습 알림 시간 설정" onPress={() => router.push('/notifications')} />
     <LinkRow title="비밀번호 재설정" subtitle="등록한 이메일로 안내" onPress={() => router.push('/reset-password')} />
     <LerenCard title="학습 기록은 계정에 저장돼요" description="같은 계정으로 로그인하면 완료한 학습과 성장 기록을 이어서 볼 수 있어요." variant="info" />
-    {confirmLogout ? <>
-      <LerenCard title="로그아웃할까요?" description="다시 로그인하면 학습 기록을 이어서 볼 수 있어요.">
-        <LerenButton title="로그아웃" loading={busy} disabled={busy} onPress={() => { void submitLogout(); }} />
-        <LerenButton title="취소" variant="secondary" disabled={busy} onPress={() => setConfirmLogout(false)} />
-      </LerenCard>
-      {!!error && <Notice tone="error">{error}</Notice>}
-    </> : <LerenButton title="로그아웃" variant="secondary" onPress={() => setConfirmLogout(true)} />}
+    <LerenButton title="로그아웃" variant="secondary" onPress={() => { setError(''); setConfirmLogout(true); }} />
+    <ConfirmDialog visible={confirmLogout} title="로그아웃할까요?" message={error || '다시 로그인하면 학습 기록을 이어서 볼 수 있어요.'} confirmLabel="로그아웃" busy={busy} onCancel={() => setConfirmLogout(false)} onConfirm={() => { void submitLogout(); }} />
   </Screen>;
 }

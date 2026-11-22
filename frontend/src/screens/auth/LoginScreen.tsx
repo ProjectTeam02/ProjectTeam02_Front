@@ -4,14 +4,13 @@
  */
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Platform, Text, StyleSheet } from 'react-native';
+import { Platform } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Notice } from '../../components/ui/Primitives';
 import LerenInput from '../../components/common/LerenInput';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
 import LerenLinkCard from '../../components/common/LerenLinkCard';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useAuth } from '../../context/AuthContext';
 
 type LoginStatus = 'empty' | 'error' | 'returning' | 'kakaoError';
@@ -25,8 +24,9 @@ export interface LoginScreenProps {
 }
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPassword, returningUserName }: LoginScreenProps = {}) {
-  const { signIn, startKakaoSignIn } = useAuth();
+export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPassword, returningUserName: previewName }: LoginScreenProps = {}) {
+  const { signIn, startKakaoSignIn, returningName } = useAuth();
+  const returningUserName = previewName ?? returningName;
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<LoginStatus>(returningUserName ? 'returning' : 'empty');
@@ -72,8 +72,6 @@ export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPa
       <LerenLinkCard title="비밀번호를 잊으셨나요?" subtitle="재설정" onPress={onResetPassword || (() => router.push('/reset-password'))} />
       <LerenButton title="카카오로 시작하기" variant="secondary" onPress={social} loading={socialBusy} disabled={busy} />
       <LerenLinkCard title="처음 오셨나요?" subtitle="회원가입" onPress={onSignup || (() => router.push('/signup'))} />
-      <Text style={styles.preview}>이메일 회원가입과 로그인은 실제 백엔드로 처리합니다.</Text>
     </Screen>
   );
 }
-const styles = StyleSheet.create({ preview: { ...TYPOGRAPHY.micro, color: COLORS.muted, marginTop: 8 } });

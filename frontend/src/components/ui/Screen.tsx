@@ -8,7 +8,7 @@ import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 
 interface ScreenProps {
   title: string; children: ReactNode; back?: boolean; tabs?: boolean;
-  footer?: ReactNode; scroll?: boolean; right?: ReactNode; onBack?: () => void; preview?: boolean; }
+  contentPadding?: number; footer?: ReactNode; scroll?: boolean; right?: ReactNode; onBack?: () => void; preview?: boolean; }
 const TABS = [
   { path: '/home', label: '홈', icon: '⌂' },
   { path: '/explore', label: '탐험', icon: '◇' },
@@ -17,7 +17,7 @@ const TABS = [
   { path: '/mypage', label: '마이', icon: '○' },
 ];
 
-export default function Screen({ title, children, back = true, tabs = false, footer, scroll = true, right, onBack, preview = false }: ScreenProps) {
+export default function Screen({ title, children, back = true, tabs = false, footer, scroll = true, right, onBack, contentPadding, preview = false }: ScreenProps) {
   const pathname = usePathname();
   // 직접 주소로 진입해 이전 화면이 없는 경우에는 홈으로 돌아갑니다.
   const goBack = () => {
@@ -26,7 +26,7 @@ export default function Screen({ title, children, back = true, tabs = false, foo
   };
   // 복습과 시안 안내를 요청한 화면에서는 실제 서버 기록에 반영되지 않는다는 안내를 표시합니다.
   const showPreview = preview || pathname === '/review';
-  const body = <View style={[styles.content, !scroll && styles.flex]}>{showPreview && <Notice>아직 미연결 · 개발용 학습·캐릭터 미리보기입니다. 이 화면의 학습·복습·직업·코인·보상·구매·채점 결과는 시안이며 실제 회원 기록에 저장되지 않습니다.</Notice>}{children}</View>;
+  const body = <View style={[styles.content, contentPadding !== undefined && { paddingHorizontal: contentPadding }, !scroll && styles.flex]}>{showPreview && <Notice>미리보기 · 이 화면의 활동은 회원 기록이나 보상에 반영되지 않아요.</Notice>}{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -39,9 +39,9 @@ export default function Screen({ title, children, back = true, tabs = false, foo
           {footer && <View style={styles.footer}>{footer}</View>}
           {tabs && <View style={styles.tabs}>
             {TABS.map(tab => {
-              const active = pathname === tab.path || (tab.path === '/explore' && ['/steps', '/lesson', '/quiz', '/result'].includes(pathname));
+              const active = pathname === tab.path || (tab.path === '/mypage' && ['/wardrobe', '/shop', '/settings', '/notifications', '/profile', '/statistics', '/calendar', '/learning-detail'].includes(pathname)) || (tab.path === '/explore' && ['/steps', '/lesson', '/quiz', '/result'].includes(pathname));
               // 하위 학습 화면도 탐험 탭을 강조하지만, 탭을 누르면 탐험 목록으로 돌아가야 합니다.
-              return <Pressable key={tab.path} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} onPress={() => { if (pathname !== tab.path) router.replace(tab.path as Href); }} style={styles.tab}>
+              return <Pressable key={tab.path} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{ selected: active }} onPress={() => { if (pathname !== tab.path) router.replace(tab.path as Href); }} style={[styles.tab, active && styles.selectedTab]}>
                 <Text style={[styles.tabIcon, active && styles.active]}>{tab.icon}</Text><Text style={[styles.tabLabel, active && styles.active]}>{tab.label}</Text>
               </Pressable>;
             })}
@@ -61,5 +61,6 @@ const styles = StyleSheet.create({
   footer: { paddingHorizontal: 24, paddingTop: 8, paddingBottom: 12, gap: 8 },
   tabs: { flexDirection: 'row', minHeight: 68, paddingVertical: 10, paddingHorizontal: 8, borderTopWidth: 1, borderColor: COLORS.line, backgroundColor: COLORS.surface },
   tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, minHeight: 44 },
+  selectedTab: { backgroundColor: COLORS.soft, borderRadius: 12 },
   tabIcon: { fontSize: 22, lineHeight: 27, color: COLORS.muted }, tabLabel: { ...TYPOGRAPHY.micro, color: COLORS.muted }, active: { color: COLORS.primary },
 });

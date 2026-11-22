@@ -93,7 +93,19 @@ export const submissionDecoder = (value: unknown): Submission => {
     status: enumValue(d.status, ['IN_PROGRESS', 'PASSED', 'FAILED']), rewardGranted: bool(d.rewardGranted) };
 };
 
+export const activeProgressDecoder = (value: unknown) => array(object(value).items, item => {
+  const row = object(item);
+  const stage = row.stage == null ? null : object(row.stage);
+  return { stageId: id(row.stageId), title: stage ? str(stage.title) : null, boss: stage?.stageType === 'BOSS',
+    position: row.contentPosition == null ? 1 : integer(row.contentPosition), updatedAt: row.contentPositionUpdatedAt ?? row.startedAt };
+}).sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')));
+
 export const LEARNING_PATHS = {
+  bossStart: (id: string) => `/api/v1/bosses/${routeId(id)}/attempts`,
+  bossAttempt: (id: string) => `/api/v1/boss-attempts/${routeId(id)}`,
+  bossAnswer: (id: string) => `/api/v1/boss-attempts/${routeId(id)}/answers`,
+  progress: (id: string) => `/api/v1/learning/progress/${routeId(id)}`,
+  active: '/api/v1/learning/progress/active',
   topics: '/api/v1/topics',
   stages: (topicId: string) => `/api/v1/topics/${routeId(topicId)}/stages`,
   stage: (stageId: string) => `/api/v1/stages/${routeId(stageId)}`,
