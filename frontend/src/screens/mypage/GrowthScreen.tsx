@@ -1,4 +1,3 @@
-
 /** 피그마 19-03: 나의 성장 상세 */
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -7,6 +6,7 @@ import { Body, Heading, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCharacter from '../../components/common/LerenCharacter';
+import LerenIcon from '../../components/common/LerenIcon';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackendProfile } from '../../context/BackendProfileContext';
 import { heroImage } from '../../constants/heroImage';
@@ -50,15 +50,17 @@ export default function GrowthScreen() {
       <Heading>학습 성과</Heading>
       <View style={{ borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, overflow: 'hidden' }}>
         <Pressable onPress={() => router.push('/statistics')} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 }}>
-          <Text style={{ ...TYPOGRAPHY.label, color: COLORS.primary }}>▥</Text>
+          <LerenIcon name="ChartNoAxesColumn" size={19} />
           <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink, flex: 1 }}>학습 통계</Text>
-          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>학습률 · 정답률 ›</Text>
+          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>학습률 · 정답률</Text>
+          <LerenIcon name="ChevronRight" size={16} color={COLORS.muted} />
         </Pressable>
         <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />
         <Pressable onPress={() => router.push({ pathname: '/statistics', params: { tab: 'history' } })} style={{ flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 }}>
-          <Text style={{ ...TYPOGRAPHY.label, color: COLORS.primary }}>⚑</Text>
+          <LerenIcon name="CheckCircle2" size={19} />
           <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink, flex: 1 }}>완료한 단계</Text>
-          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>{p.completedStageCount}단계 ›</Text>
+          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>{p.completedStageCount}단계</Text>
+          <LerenIcon name="ChevronRight" size={16} color={COLORS.muted} />
         </Pressable>
       </View>
       <LerenButton title="탐험 이어가기" onPress={() => router.push('/explore')} />

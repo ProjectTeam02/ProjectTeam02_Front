@@ -6,17 +6,18 @@ import Screen from '../../components/ui/Screen';
 import { Body, Heading, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
+import LerenIcon from '../../components/common/LerenIcon';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackendProfile } from '../../context/BackendProfileContext';
 import { useBackend } from '../../hooks/useBackend';
 import { historyDecoder, PATHS } from '../../services/backend';
 
-function Menu({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
+function Menu({ icon, title, subtitle, onPress }: { icon: React.ComponentProps<typeof LerenIcon>['name']; title: string; subtitle: string; onPress: () => void }) {
   return <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', padding: 12, gap: 10 }}>
-    <Text style={{ ...TYPOGRAPHY.label, color: COLORS.primary, width: 20, textAlign: 'center' }}>{icon}</Text>
+    <LerenIcon name={icon} size={19} />
     <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink, flex: 1 }}>{title}</Text>
     <Text style={{ ...TYPOGRAPHY.micro, color: COLORS.muted }}>{subtitle}</Text>
-    <Text style={{ ...TYPOGRAPHY.label, color: COLORS.muted }}>›</Text>
+    <LerenIcon name="ChevronRight" size={16} color={COLORS.muted} />
   </Pressable>;
 }
 
@@ -54,7 +55,7 @@ export default function MyLearningScreen() {
     <Heading>다시 풀어보기</Heading>
     <View style={{ backgroundColor: COLORS.soft, borderRadius: 12, padding: 14, gap: 10 }}>
       <Row>
-        <Text style={{ ...TYPOGRAPHY.label, color: COLORS.primary }}>▣</Text>
+        <LerenIcon name="BookOpen" size={19} />
         <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink }}>선택과 기회비용</Text>
       </Row>
       <Body muted>틀렸거나 헷갈렸던 개념을 복습 노트에서 다시 확인해요.</Body>
@@ -62,13 +63,13 @@ export default function MyLearningScreen() {
     </View>
     <Heading>나의 기록</Heading>
     <View style={{ borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, overflow: 'hidden' }}>
-      <Menu icon="▣" title="오답 노트" subtitle="틀린 문제" onPress={() => router.push('/review')} />
+      <Menu icon="BookOpen" title="오답 노트" subtitle="틀린 문제" onPress={() => router.push('/review')} />
       <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />
-      <Menu icon="◷" title="학습 이력" subtitle="완료 · 응시 내역" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'history' } })} />
+      <Menu icon="History" title="학습 이력" subtitle="완료 · 응시 내역" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'history' } })} />
       <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />
-      <Menu icon="▦" title="학습 달력" subtitle="날짜별 기록" onPress={() => router.push('/calendar')} />
+      <Menu icon="CalendarDays" title="학습 달력" subtitle="날짜별 기록" onPress={() => router.push('/calendar')} />
       <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />
-      <Menu icon="▥" title="학습 통계" subtitle="개념별 정답률" onPress={() => router.push('/statistics')} />
+      <Menu icon="ChartNoAxesColumn" title="학습 통계" subtitle="개념별 정답률" onPress={() => router.push('/statistics')} />
     </View>
   </Screen>;
 }

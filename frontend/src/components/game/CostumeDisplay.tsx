@@ -1,3 +1,4 @@
+
 import { Pressable, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { COSTUME_IMAGES, getCostumeImage } from '../../constants/costumeImages';
@@ -15,7 +16,7 @@ export function CostumeArt({ item, fallback, size, height }: { item?: Costume; f
   const colors = swatch(source);
   return <View style={[s.art, { height, backgroundColor: colors.base }]}>
     {source ? <>
-      <View style={[s.platform, { width: size * 1.1, height: size * 0.2, top: (height + size * 0.58) / 2, backgroundColor: colors.shade }]} />
+      <View style={[s.platform, { width: size * 1.1, height: size * 0.2, top: (height + size * 0.58) / 2, backgroundColor: colors.shade, transform: [{ translateX: -6 }] }]} />
       <LerenCharacter source={source} size={size} accessibilityLabel={item?.name ?? '현재 직업'} />
     </> : <Text style={s.caption}>이미지 준비 중</Text>}
   </View>;

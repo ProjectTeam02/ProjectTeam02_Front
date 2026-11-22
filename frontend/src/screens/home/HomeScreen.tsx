@@ -1,4 +1,3 @@
-
 /** 피그마 20-01~20-05: 학습 상태별 홈 대시보드 */
 import { Pressable, Text, View } from 'react-native';
 import { router } from 'expo-router';
@@ -7,6 +6,7 @@ import { Body, Heading, Progress, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCharacter from '../../components/common/LerenCharacter';
+import LerenIcon from '../../components/common/LerenIcon';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { heroImage } from '../../constants/heroImage';
 import { useBackendProfile } from '../../context/BackendProfileContext';
@@ -14,8 +14,9 @@ import { useLearningQuery } from '../../hooks/useLearningQuery';
 import { PATHS, historyDecoder, monthDecoder } from '../../services/backend';
 import { activeProgressDecoder, LEARNING_PATHS, stagesDecoder, topicsDecoder } from '../../services/learningApi';
 
-function HomeLink({ title, detail, onPress }: { title: string; detail?: string; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" onPress={onPress} style={{ minHeight: 44, paddingVertical: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: COLORS.line, gap: 8 }}>
+function HomeLink({ title, detail, onPress, last = false, icon }: { title: string; detail?: string; onPress: () => void; last?: boolean; icon?: React.ComponentProps<typeof LerenIcon>['name'] }) {
+  return <Pressable accessibilityRole="button" onPress={onPress} style={{ minHeight: 44, paddingVertical: 11, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', borderBottomWidth: last ? 0 : 1, borderBottomColor: COLORS.line, gap: 8 }}>
+    {icon && <LerenIcon name={icon} size={19} />}
     <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink, flex: 1 }}>{title}</Text>
     {!!detail && <Text style={{ ...TYPOGRAPHY.micro, color: COLORS.muted }}>{detail}</Text>}
     <Text style={{ fontSize: 16, color: COLORS.muted }}>›</Text>
@@ -23,7 +24,9 @@ function HomeLink({ title, detail, onPress }: { title: string; detail?: string; 
 }
 
 function HomeLinks({ children }: { children: React.ReactNode }) {
-  return <View style={{ borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, overflow: 'hidden', paddingHorizontal: 2 }}>{children}</View>;
+  return <View style={{ borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, overflow: 'hidden', backgroundColor: COLORS.surface }}>
+    {children}
+  </View>;
 }
 
 function HomeSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -170,9 +173,9 @@ export default function HomeScreen() {
       </HomeSection>
       <HomeSection title="학습 마무리">
         <HomeLinks>
-          <HomeLink title="오늘의 복습" detail="오답 확인" onPress={() => router.push('/review')} />
-          <HomeLink title="학습 통계 보기" detail="개념별 성과" onPress={() => router.push('/statistics')} />
-          <HomeLink title="탐험 지도 보기" detail="다음 지역" onPress={() => router.push('/explore')} />
+          <HomeLink icon="BookOpen" title="오늘의 복습" detail="오답 확인" onPress={() => router.push('/review')} />
+          <HomeLink icon="ChartNoAxesColumn" title="학습 통계 보기" detail="개념별 성과" onPress={() => router.push('/statistics')} />
+          <HomeLink icon="Map" title="탐험 지도 보기" detail="다음 지역" last onPress={() => router.push('/explore')} />
         </HomeLinks>
       </HomeSection>
     </>}
