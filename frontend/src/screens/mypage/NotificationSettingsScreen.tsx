@@ -1,21 +1,18 @@
-/**
- * 피그마 26-04: 학습 알림 현재 설정 조회 및 서버 저장
- * 구현 완료: 알림 설정 조회, 켜기·끄기, 알림 시간 변경, 서버 저장 및 오류 처리
- * 미구현: 실제 휴대폰 푸시 알림 발송 및 기기 알림 권한 요청·상태 조회
- * 주의: 현재는 백엔드에 알림 설정만 저장하며, 실제 휴대폰 알림이 발송되지는 않습니다.
- */
+
+/** 피그마 26-04: 학습 알림 설정 조회 및 서버 저장 */
 import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
-import { Chip, Notice, Row } from '../../components/ui/Primitives';
+import { Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
-import LerenCard from '../../components/common/LerenCard';
 import LerenInput from '../../components/common/LerenInput';
+import LerenIcon from '../../components/common/LerenIcon';
+import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
 import { object, BackendError } from '../../services/backend';
 
 const PATH = '/api/v1/users/me/notification-settings';
 
-/** 서버에서 받은 학습 알림 설정을 검증합니다. */
 const settingDecoder = (value: unknown): { reminderEnabled: boolean; reminderTime: string | null } => {
   const data = object(value);
   if (typeof data.reminderEnabled !== 'boolean') throw new BackendError('알림 설정 응답이 올바르지 않습니다.');
@@ -23,14 +20,12 @@ const settingDecoder = (value: unknown): { reminderEnabled: boolean; reminderTim
   return { reminderEnabled: data.reminderEnabled, reminderTime: typeof data.reminderTime === 'string' ? data.reminderTime : null };
 };
 
-/** 서버 시간을 오전/오후 형식으로 변환합니다. */
 const toDisplayTime = (value: string) => {
   const [hours, minutes] = value.split(':').map(Number);
   if (!Number.isInteger(hours) || !Number.isInteger(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return '';
   return `${hours >= 12 ? '오후' : '오전'} ${hours % 12 || 12}:${String(minutes).padStart(2, '0')}`;
 };
 
-/** 입력한 시간을 서버의 HH:MM:SS 형식으로 변환합니다. */
 const toServerTime = (value: string): string | null => {
   const match = value.trim().match(/^(오전|오후)\s*(\d{1,2}):([0-5]\d)$/);
   if (!match) return null;
@@ -48,11 +43,10 @@ export default function NotificationSettingsScreen() {
   const [saved, setSaved] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const initialized = settings.data !== null;
-  const enabled =editedEnabled ?? settings.data?.reminderEnabled ?? null;
-  const time =editedTime ?? (settings.data?.reminderTime ? toDisplayTime(settings.data.reminderTime): '오후 8:00');
+  const enabled = editedEnabled ?? settings.data?.reminderEnabled ?? null;
+  const time = editedTime ?? (settings.data?.reminderTime ? toDisplayTime(settings.data.reminderTime) : '오후 8:00');
   const serverTime = toServerTime(time);
 
-  /** 학습 알림 켜기·끄기 및 시간을 서버에 저장합니다. */
   const save = async () => {
     setSubmitted(true);
     if (enabled === null || (enabled && !serverTime) || action.busy) return;
@@ -74,20 +68,49 @@ export default function NotificationSettingsScreen() {
       <LerenButton title="다시 조회" variant="secondary" onPress={settings.reload} />
     </>}
     {initialized && <>
-      <Row>
-        <Chip label="알림 켜기" active={enabled === true} onPress={() => { if (!action.busy) { setEnabled(true); setSaved(false); } }} />
-        <Chip label="알림 끄기" active={enabled === false} onPress={() => { if (!action.busy) { setEnabled(false); setSaved(false); } }} />
-      </Row>
+      <View style={{ flexDirection: 'row', backgroundColor: '#F4F6FA', borderRadius: 10, padding: 4, gap: 4 }}>
+        <Pressable accessibilityRole="button" accessibilityState={{ selected: enabled === true }} disabled={action.busy}
+          onPress={() => { setEnabled(true); setSaved(false); }}
+          style={{ flex: 1, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 8, backgroundColor: enabled === true ? COLORS.surface : 'transparent', borderWidth: enabled === true ? 1 : 0, borderColor: COLORS.line }}>
+          <LerenIcon name="Bell" size={16} color={enabled === true ? COLORS.primary : COLORS.muted} />
+          <Text style={{ ...TYPOGRAPHY.small, color: enabled === true ? COLORS.primary : COLORS.muted, fontWeight: enabled === true ? '700' : '400' }}>알림 켜기</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" accessibilityState={{ selected: enabled === false }} disabled={action.busy}
+          onPress={() => { setEnabled(false); setSaved(false); }}
+          style={{ flex: 1, minHeight: 38, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 8, backgroundColor: enabled === false ? COLORS.surface : 'transparent', borderWidth: enabled === false ? 1 : 0, borderColor: COLORS.line }}>
+          <LerenIcon name="BellOff" size={16} color={enabled === false ? COLORS.primary : COLORS.muted} />
+          <Text style={{ ...TYPOGRAPHY.small, color: enabled === false ? COLORS.primary : COLORS.muted, fontWeight: enabled === false ? '700' : '400' }}>알림 끄기</Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+        <LerenIcon name="Clock" size={18} />
+        <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink }}>학습 알림 시간</Text>
+      </View>
       <LerenInput label="학습 알림 시간" value={time} onChangeText={value => { setTime(value); setSaved(false); }}
         placeholder="오후 8:00" editable={enabled === true && !action.busy}
-        hint="오전 9:00 또는 오후 8:00 형식으로 입력해 주세요."
+        hint="학습할 시간을 정해 보세요"
         error={(editedTime !== null || submitted) && enabled === true && !serverTime ? '알림 시간을 올바르게 입력해 주세요.' : ''} />
-      {enabled === false && <LerenCard title="기기 알림 권한 안내" description="기기 설정에서 LEREN 알림을 허용하면 학습 시간에 알림을 받을 수 있어요." variant="reward" />}
-      <LerenCard title="알림 권한" description="기기 설정에서 알림을 허용해 주세요. 실제 기기 권한 조회는 아직 연결되지 않았습니다." />
+      {enabled === false && <View style={{ backgroundColor: '#FFF4E3', borderRadius: 12, padding: 14, gap: 5 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+          <LerenIcon name="BellOff" size={18} color="#94621D" />
+          <Text style={{ ...TYPOGRAPHY.label, color: '#94621D' }}>알림 권한이 꺼져 있어요</Text>
+        </View>
+        <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>기기 설정에서 LEREN 알림을 허용하면 학습 시간을 알려 드릴 수 있어요.</Text>
+      </View>}
+      <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, gap: 10 }}>
+        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: COLORS.soft, alignItems: 'center', justifyContent: 'center' }}>
+          <LerenIcon name="Settings" size={18} />
+        </View>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink }}>알림 권한</Text>
+          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>기기 설정에서 허용하기</Text>
+        </View>
+      </View>
+      <Notice>현재는 서버에 알림 설정만 저장돼요. 실제 기기 알림 권한과 푸시 발송은 아직 연결되지 않았어요.</Notice>
       {!!action.error && <Notice tone="error">{action.error}</Notice>}
       {saved && <Notice tone="success">학습 알림 설정을 저장했어요.</Notice>}
       <LerenButton title="설정 저장" loading={action.busy} disabled={action.busy || enabled === null || (enabled && !serverTime)} onPress={() => { void save(); }} />
-      <Notice>알림을 끄더라도 학습 달력의 일정은 확인할 수 있어요.</Notice>
+      <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>알림을 끄더라도 학습 달력의 일정은 확인할 수 있어요.</Text>
     </>}
   </Screen>;
 }

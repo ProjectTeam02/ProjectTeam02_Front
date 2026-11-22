@@ -15,9 +15,7 @@ export function ApiStatus<T>({ resource, label, empty = false }: { resource: Api
     const failure = unavailable ? 'API 미연결' : resource.errorCode === 'NETWORK_ERROR' ? '서버 연결 실패' : resource.errorCode === 'TIMEOUT' ? '서버 응답 시간 초과' : resource.httpStatus === 401 ? '로그인 필요' : 'API 요청 실패';
     return <><Notice tone={unavailable ? 'info' : 'error'}>{label} · {failure}: {resource.error}</Notice>{resource.httpStatus === 401 && <LerenButton title="로그인 화면 열기" onPress={() => router.push('/login')} />}<LerenButton title={`${label} 다시 조회`} variant="secondary" onPress={resource.reload} /></>;
   }
-  if (!diagnostics) return <Pressable accessibilityRole="button" accessibilityLabel={label + ' 새로고침'} onPress={resource.reload} style={s.refresh}>
-    <Text style={s.label}>{empty ? label + ' 없음 · ' : ''}새로고침 ↻</Text>
-  </Pressable>;
+  if (!diagnostics) return null;
   return <><Notice tone="success">{label} · {empty ? 'API는 연결되었으나 실제 데이터가 없어 표시되지 않습니다.' : 'API 연결 및 조회에 성공했습니다.'}</Notice><LerenButton title={`${label} 새로고침`} variant="secondary" onPress={resource.reload} /></>;
 }
 const s = StyleSheet.create({ refresh: { alignSelf: 'flex-end', justifyContent: 'center', minHeight: 44, paddingHorizontal: 4 }, label: { ...TYPOGRAPHY.small, color: COLORS.muted } });

@@ -51,7 +51,7 @@ export default function CostumeShopScreen() {
       const result = await action.run(COSTUME_PATHS.purchase, purchaseDecoder, 'POST', request.current);
       if (result) {
         request.current = null;
-        setReceipt({ item, balance: result.coinBalance, spent: result.priceCoin ?? null });
+        setReceipt({ item, balance: result.coinBalance, spent: item.priceCoin });
         shop.reload(); detail.reload(); profile.reload();
       }
     } finally { setPendingItemId(null); }
@@ -73,7 +73,7 @@ export default function CostumeShopScreen() {
     {profile.data && <LerenCard title={`보유 코인 ${profile.data.coinBalance?.toLocaleString() ?? '확인 불가'}개`}
       description="내 지갑" variant="info" />}
     <ApiStatus resource={shop} label="코스튬 상품 목록" empty={shop.data?.total === 0} />
-    {detailId && <LerenCard title="코스튬 상세">
+    {!!detailId && <LerenCard title="코스튬 상세">
       <ApiStatus resource={detail} label="코스튬 상세" />
       {detail.data && <>
         <LerenCharacter source={getCostumeImage(detail.data.costumeCode, detail.data.name)} size={120} accessibilityLabel={detail.data.name} />

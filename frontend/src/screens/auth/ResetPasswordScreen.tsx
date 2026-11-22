@@ -1,6 +1,8 @@
 /** 피그마 27번: 이메일 요청 → 메일 확인 → 새 비밀번호 설정 → 완료 */
 import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
+import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import Screen from '../../components/ui/Screen';
 import { Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
@@ -33,6 +35,7 @@ export default function ResetPasswordScreen() {
     catch (cause) { setError(cause instanceof Error ? cause.message : '재설정 안내를 요청하지 못했어요.'); }
     finally { setBusy(false); }
   };
+
   const change = async () => {
     setSubmitted(true);
     if (!validPassword || !validConfirm || !token || busy) return;
@@ -46,7 +49,13 @@ export default function ResetPasswordScreen() {
 
   return <Screen title={step === 'email' || step === 'sent' ? '비밀번호 재설정' : step === 'password' ? '새 비밀번호 설정' : '비밀번호 변경 완료'} back>
     {step === 'email' && <>
-      <LerenCard title="비밀번호를 잊으셨나요?" description="가입할 때 사용한 이메일을 입력해 주세요." variant="info" />
+      <View style={s.info}>
+        <View style={s.infoText}>
+          <Text style={s.infoTitle}>비밀번호를 잊으셨나요?</Text>
+          <Text style={s.infoDescription}>가입할 때 사용한 이메일을 입력해 주세요.</Text>
+        </View>
+        <View style={s.iconCircle}><Text style={s.infoIcon}>🔒</Text></View>
+      </View>
       <LerenInput label="이메일" value={email} onChangeText={value => { setEmail(value); setError(''); }}
         placeholder="가입할 때 사용한 이메일" keyboardType="email-address" autoComplete="email"
         editable={!busy} hint="가입할 때 사용한 이메일"
@@ -54,19 +63,33 @@ export default function ResetPasswordScreen() {
       <LerenButton title="재설정 안내 받기" disabled={!validEmail} loading={busy} onPress={() => { void send(); }} />
       <LerenButton title="로그인으로 돌아가기" variant="secondary" onPress={login} />
     </>}
+
     {step === 'sent' && <>
-      <LerenCard title="메일함을 확인해 주세요" description="입력한 이메일로 안내를 확인할 수 있어요." variant="success" />
-      <LerenCard title={email} description={'등록된 계정이라면 비밀번호 재설정 안내가 발송돼요.\n메일의 링크에서 새 비밀번호를 설정해 주세요.'} variant="info" />
+      <View style={s.info}>
+        <View style={s.infoText}>
+          <Text style={s.infoTitle}>메일함을 확인해 주세요</Text>
+          <Text style={s.infoDescription}>입력한 이메일로 안내를 확인할 수 있어요.</Text>
+        </View>
+        <View style={s.iconCircle}><Text style={s.infoIcon}>✉</Text></View>
+      </View>
+      <LerenCard title={email} description={'등록된 계정이라면 비밀번호 재설정 안내가 발송돼요.\n메일의 링크에서 새 비밀번호를 설정해 주세요.'} />
       <LerenCard title="LEREN 비밀번호 재설정 메일" description="새 비밀번호 설정" />
-      <Notice>메일이 보이지 않으면 스팸함도 확인해 주세요.</Notice>
+      <Text style={s.hint}>메일이 보이지 않으면 스팸함도 확인해 주세요.</Text>
       <LerenButton title="이메일 다시 보내기" variant="secondary" loading={busy} onPress={() => { void send(); }} />
       <LerenButton title="로그인으로 돌아가기" onPress={login} />
     </>}
+
     {step === 'password' && <>
-      <LerenCard title="새 비밀번호를 정해 주세요" description="자주 사용하는 다른 비밀번호와 다르게 설정해요." variant="info" />
+      <View style={s.info}>
+        <View style={s.infoText}>
+          <Text style={s.infoTitle}>새 비밀번호를 정해 주세요</Text>
+          <Text style={s.infoDescription}>자주 사용하는 다른 비밀번호와 다르게 설정해요.</Text>
+        </View>
+        <View style={s.iconCircle}><Text style={s.infoIcon}>♙</Text></View>
+      </View>
       <LerenInput label="새 비밀번호" value={password} onChangeText={value => { setPassword(value); setError(''); }}
         placeholder="새 비밀번호" secure autoComplete="new-password" editable={!busy}
-        hint="8~128자의 비밀번호를 입력해 주세요"
+        hint="안전한 비밀번호를 입력해 주세요"
         error={submitted && !validPassword ? '비밀번호는 8~128자여야 합니다.' : ''} />
       <LerenInput label="새 비밀번호 확인" value={confirm} onChangeText={value => { setConfirm(value); setError(''); }}
         placeholder="새 비밀번호 확인" secure autoComplete="new-password" editable={!busy}
@@ -76,11 +99,29 @@ export default function ResetPasswordScreen() {
         onPress={() => { void change(); }} />
       <LerenButton title="로그인으로 돌아가기" variant="secondary" onPress={login} />
     </>}
+
     {step === 'complete' && <>
-      <LerenCard title="비밀번호를 변경했어요" description="새 비밀번호로 로그인해 모험을 이어가세요." variant="success" />
-      <LerenCard title="학습 기록이 기다리고 있어요" description="완료한 학습과 캐릭터 성장은 계정에 그대로 남아 있어요." variant="info" />
+      <View style={s.info}>
+        <View style={s.infoText}>
+          <Text style={s.infoTitle}>비밀번호를 변경했어요</Text>
+          <Text style={s.infoDescription}>새 비밀번호로 로그인해 모험을 이어가세요.</Text>
+        </View>
+        <View style={s.iconCircle}><Text style={s.infoIcon}>✓</Text></View>
+      </View>
+      <LerenCard title="학습 기록이 기다리고 있어요" description="완료한 학습과 캐릭터 성장은 계정에 그대로 남아 있어요." />
       <LerenButton title="로그인하기" onPress={login} />
     </>}
+
     {!!error && <Notice tone="error">{error}</Notice>}
   </Screen>;
 }
+
+const s = StyleSheet.create({
+  info: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.soft, borderRadius: 12, padding: 14, gap: 12 },
+  infoText: { flex: 1, gap: 4 },
+  infoTitle: { ...TYPOGRAPHY.label, color: COLORS.ink },
+  infoDescription: { ...TYPOGRAPHY.small, color: COLORS.muted },
+  iconCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.surface, alignItems: 'center', justifyContent: 'center' },
+  infoIcon: { fontSize: 20, color: COLORS.primary, textAlign: 'center' },
+  hint: { ...TYPOGRAPHY.small, color: COLORS.muted },
+});

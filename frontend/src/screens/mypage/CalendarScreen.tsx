@@ -56,7 +56,7 @@ export default function CalendarScreen() {
     <Row><Chip label="새 학습" active={draft.planType === 'NEW_LEARNING'} onPress={() => setDraft({ ...draft, planType: 'NEW_LEARNING' })} /><Chip label="복습" active={draft.planType === 'REVIEW'} onPress={() => setDraft({ ...draft, planType: 'REVIEW' })} /></Row>
     <Heading>학습할 내용</Heading>{draft.target && <Body>선택: {draft.target.label}</Body>}<Row style={{ flexWrap: 'wrap' }}>{catalog.data?.items.map(t => <Chip key={t.topicId} label={t.title} active={topic === t.topicId} onPress={() => setChosenTopic(t.topicId)} />)}</Row>
     <ApiStatus resource={catalog} label="학습 주제" />
-    {topic && <ApiStatus resource={stageList} label="학습 단계" />}
+    {!!topic && <ApiStatus resource={stageList} label="학습 단계" />}
     {stageList.data?.items.map(s => <Chip key={s.stageId} label={s.title} active={draft.target?.stageId === s.stageId} onPress={() => setDraft({ ...draft, target: { topicId: s.topicId, stageId: s.stageId, conceptId: null, label: s.title } })} />)}
     {targets.length > 0 && <Body muted>최근 학습 대상</Body>}{targets.map((t, i) => <LerenButton key={i} title={t.label} variant="secondary" onPress={() => setDraft({ ...draft, target: t })} />)}
     {!draft.target && <Notice>학습 주제를 고른 뒤 일정을 잡을 단계를 선택해 주세요.</Notice>}

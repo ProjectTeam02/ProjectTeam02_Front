@@ -26,7 +26,7 @@ export default function Screen({ title, children, back = true, tabs = false, foo
   };
   // 복습과 시안 안내를 요청한 화면에서는 실제 서버 기록에 반영되지 않는다는 안내를 표시합니다.
   const showPreview = preview || pathname === '/review';
-  const body = <View style={[styles.content, contentPadding !== undefined && { paddingHorizontal: contentPadding }, !scroll && styles.flex]}>{showPreview && <Notice>미리보기 · 이 화면의 활동은 회원 기록이나 보상에 반영되지 않아요.</Notice>}{children}</View>;
+  const body = <View style={[styles.content, contentPadding !== undefined && { paddingHorizontal: contentPadding }, !scroll && styles.flex]}>{showPreview ? <Notice>미리보기 · 이 화면의 활동은 회원 기록이나 보상에 반영되지 않아요.</Notice> : null}{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

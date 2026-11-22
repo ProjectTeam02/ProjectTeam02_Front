@@ -7,7 +7,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import { router } from 'expo-router';
 import Screen from '../../components/ui/Screen';
 import { ApiStatus } from '../../components/ui/ApiStatus';
-import { Body, Empty, LinkRow, Notice, Row } from '../../components/ui/Primitives';
+import { Empty, LinkRow, Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
@@ -37,13 +37,9 @@ export default function WardrobeScreen() {
   };
 
   const equippedOutfit = inventory.data?.items.find(item => inventory.data?.equipped.some(row => row.itemId === item.itemId));
-  const previous = confirmItem && inventory.data?.items.find(i => inventory.data?.equipped.some(e => e.category === confirmItem.category && e.itemId === i.itemId));
   const portrait = getCostumeImage(equippedOutfit?.costumeCode ?? '', equippedOutfit?.name ?? undefined) ?? heroImage(profile.data?.characterClass);
   return <Screen title="내 옷장" back tabs>
-    <ConfirmDialog visible={confirmItem !== null} title="코스튬 장착" message={confirmItem ? `${confirmItem.name}을(를) 장착할까요?` : ''} confirmLabel="장착하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmEquip(confirmItem); }}>
-      {confirmItem && <Row><LerenCard title="현재" style={{ flex: 1 }}><LerenCharacter source={getCostumeImage(previous?.costumeCode ?? '', previous?.name ?? undefined) ?? heroImage(profile.data?.characterClass)} size={72} /><Body>{previous?.name ?? '기본 모습'}</Body></LerenCard>
-        <LerenCard title="장착 후" style={{ flex: 1 }}><LerenCharacter source={getCostumeImage(confirmItem.costumeCode, confirmItem.name)} size={72} /><Body>{confirmItem.name}</Body></LerenCard></Row>}
-    </ConfirmDialog>
+    <ConfirmDialog visible={confirmItem !== null} title="코스튬 장착" message={confirmItem ? `${confirmItem.name}을(를) 장착할까요?` : ''} confirmLabel="장착하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmEquip(confirmItem); }} />
     <ApiStatus resource={profile} label="직업 조회" />
     {profile.data && <LerenCard title={profile.data.characterClass?.name ?? '직업 데이터 없음'}
       description={profile.data.equippedCostumes.map(item => item.name ?? '코스튬').join(', ') || '현재 장착한 코스튬이 없어요.'} variant="info">
