@@ -8,7 +8,7 @@ import LerenCharacter from '../../components/common/LerenCharacter';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
 import { ApiStatus } from '../../components/ui/ApiStatus';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
+import { COLORS, LAYOUT, TYPOGRAPHY } from '../../constants/theme';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
 import { JOB_PATHS, jobsDecoder, jobChangeDecoder, initialJobDecoder, type CharacterJob } from '../../services/jobApi';
@@ -35,10 +35,10 @@ const findJob = (items: CharacterJob[], job: JobId) => items.find(item => {
 });
 
 export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: JobSelectionScreenProps = {}) {
-  const { preview } = useLocalSearchParams<{ preview?: string }>();
+  const { preview, from } = useLocalSearchParams<{ preview?: string; from?: string }>();
   const previewOnly = preview === '1';
   const { width } = useWindowDimensions();
-  const imageSize = Math.max(40, Math.min(88, (Math.min(width, 440) - 48 - 24) / 3 - 18));
+  const imageSize = Math.max(40, Math.min(88, ((width >= LAYOUT.wideViewport ? LAYOUT.contentMaxWidth : width) - 2 * LAYOUT.screenPadding - 2 * LAYOUT.gap) / 3 - 10));
   const [selection, setSelection] = useState<JobId | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -74,12 +74,12 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
            setError('저장 후 회원 정보를 확인하지 못했습니다. 마이페이지에서 현재 직업을 확인해 주세요.'); return;
        }
       }
-      if (onComplete) { onComplete(selection);} else if (initialSelection) {router.replace('/home');} else {router.replace('/mypage');}
+      if (onComplete) { onComplete(selection);} else if (initialSelection) {router.replace('/home');} else if (from === 'wardrobe' && router.canGoBack()) { router.back(); } else {router.replace('/mypage');}
     } catch { setError('직업을 저장하지 못했습니다. 다시 시도해 주세요.'); }
     finally { setBusy(false); }
   };
 
-  return <Screen title={previewOnly ? '직업 미리보기' : initialSelection ? '첫 직업 선택' : '직업 변경'} onBack={onBack} preview={previewOnly}>
+  return <Screen title={previewOnly ? '직업 미리보기' : initialSelection ? '직업 선택' : '직업 변경'} onBack={onBack} tabs={from === 'wardrobe'} preview={previewOnly}>
     {!selected && <LerenCard title="어떤 영웅과 함께할까요?" description="마음에 드는 직업을 선택해 주세요." variant="info" />}
     {!previewOnly && <ApiStatus resource={jobs} label="직업 목록" empty={jobs.data?.items.length === 0} />}
     <View style={styles.jobs}>
@@ -95,23 +95,24 @@ export default function JobSelectionScreen({ onBack, onSaveJob, onComplete }: Jo
       <LerenCharacter source={selected.image} size={64} accessibilityLabel={`선택한 캐릭터: ${selected.name}`} />
       <Text style={styles.previewTitle}>{selected.name}</Text>
       <Text style={styles.hint}>{selected.description}</Text>
+      {from === 'wardrobe' && profile.data?.characterClass && <Text style={styles.hint}>현재 직업 · {profile.data.characterClass.name}</Text>}
     </LerenCard>}
     {!previewOnly && <>
       {!!error && <LerenCard title="선택을 저장하지 못했어요"
         description={`${error}\n선택한 ${selected?.name ?? '직업'}는 그대로 유지했어요.`} variant="error" />}
       {!!action.error && <Text style={styles.hint}>{action.error}</Text>}
-      <LerenButton title={error ? '다시 저장하기' : selected ? `${selected.name}로 모험 시작` : '직업을 선택해 주세요'}
+      <LerenButton title={error ? '다시 저장하기' : selected ? `${selected.name}${initialSelection ? '로 모험 시작' : '로 변경하기'}` : '직업을 선택해 주세요'}
         disabled={!selection || busy || action.busy || jobs.status !== 'success' || (!onSaveJob && (!serverJob || profile.status !== 'success'))}
         loading={busy || action.busy} onPress={() => { void submit(); }} />
       {!!error && <LerenButton title="직업 다시 고르기" variant="secondary"
         onPress={() => { setSelection(null); setError(''); }} />}
-      <Text style={styles.hint}>직업은 나중에 마이페이지에서 바꿀 수 있어요.</Text>
+      <Text style={styles.hint}>{selected ? '직업을 골라도 학습 경로와 완료 조건은 같아요.' : '직업은 나중에 마이페이지에서 바꿀 수 있어요.'}</Text>
     </>}
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  jobs: { flexDirection: 'row', gap: 12, alignItems: 'stretch' },
+  jobs: { flexDirection: 'row', gap: LAYOUT.gap, alignItems: 'stretch' },
   job: { flex: 1, minWidth: 0, paddingHorizontal: 4, paddingVertical: 8, minHeight: 134, alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: COLORS.line, borderRadius: 16, backgroundColor: COLORS.surface },
   selected: { borderColor: COLORS.primary, backgroundColor: COLORS.soft },
   jobName: { ...TYPOGRAPHY.label, color: COLORS.ink, textAlign: 'center' },

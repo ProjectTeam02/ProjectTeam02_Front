@@ -102,7 +102,7 @@ export default function TutorScreen() {
 }
 const tutor = require('../../../assets/characters/leren_tutor.png');
 const s = StyleSheet.create({
-  composeRow: { alignItems: 'flex-end' }, field: { flex: 1 }, send: { width: 72, minHeight: 54 },
+  composeRow: { alignItems: 'flex-end', gap: 10 }, field: { flex: 1, minWidth: 0 }, send: { width: 64, minHeight: 56, paddingHorizontal: 4 },
   welcome: { alignItems: 'center', paddingVertical: 20, gap: 8 }, friend: { width: 128, height: 117 },
   suggestions: { flexWrap: 'wrap' }, page: { flex: 1, width: undefined },
   message: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' }, mine: { justifyContent: 'flex-end' },

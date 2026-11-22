@@ -62,7 +62,7 @@ export default function LerenLinkCard({
 const styles = StyleSheet.create({
   card: {
     width: '100%',
-    minHeight: 69,
+    minHeight: LAYOUT.buttonHeight,
     padding: 12,
     borderWidth: 1,
     borderColor: COLORS.line,

@@ -65,8 +65,8 @@ export default function LoginScreen({ onLogin, onKakaoLogin, onSignup, onResetPa
   return (
     <Screen title="LEREN">
       <LerenCard title={title} description={description} variant={status === 'error' ? 'error' : 'info'} />
-      <LerenInput label="이메일" value={email} onChangeText={(value) => { setEmail(value); setStatus('empty'); }} placeholder="이메일을 입력해 주세요" keyboardType="email-address" autoComplete="email" editable={!busy} error={email.length > 0 && !EMAIL.test(email.trim()) ? '이메일 형식을 확인해 주세요' : ''} />
-      <LerenInput label="비밀번호" value={password} onChangeText={(value) => { setPassword(value); setStatus('empty'); }} placeholder="비밀번호를 입력해 주세요" secure autoComplete="current-password" editable={!busy} error={status === 'error' ? '입력한 계정 정보를 확인해 주세요' : ''} />
+      <LerenInput label="이메일" value={email} onChangeText={(value) => { setEmail(value); setStatus('empty'); }} placeholder="입력해 주세요" hint={!email ? '가입한 이메일을 입력해 주세요' : undefined} keyboardType="email-address" autoComplete="email" editable={!busy} error={email.length > 0 && !EMAIL.test(email.trim()) ? '이메일 형식을 확인해 주세요' : ''} />
+      <LerenInput label="비밀번호" value={password} onChangeText={(value) => { setPassword(value); setStatus('empty'); }} placeholder="입력해 주세요" hint={!password ? '비밀번호를 입력해 주세요' : undefined} secure autoComplete="current-password" editable={!busy} error={status === 'error' ? '입력한 계정 정보를 확인해 주세요' : ''} />
       <LerenButton title={status === 'error' ? '다시 로그인' : '로그인'} disabled={!valid || socialBusy} loading={busy} onPress={submit} />
       {!!error && <Notice tone="error">{error}</Notice>}
       <LerenLinkCard title="비밀번호를 잊으셨나요?" subtitle="재설정" onPress={onResetPassword || (() => router.push('/reset-password'))} />

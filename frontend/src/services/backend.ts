@@ -11,12 +11,12 @@ type Obj = Record<string, unknown>;
 export type Decoder<T> = (data: unknown) => T;
 const bad = (): never => { throw new BackendError('서버 응답 형식이 예상과 다릅니다. 빈 데이터로 처리하지 않았습니다.', 0, 'INVALID_RESPONSE'); };
 export const object = (v: unknown): Obj => v !== null && typeof v === 'object' && !Array.isArray(v) ? v as Obj : bad();
-const str = (v: unknown): string => typeof v === 'string' ? v : bad();
-const num = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) ? v : bad();
-const bool = (v: unknown): boolean => typeof v === 'boolean' ? v : bad();
+export const str = (v: unknown): string => typeof v === 'string' ? v : bad();
+export const num = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) ? v : bad();
+export const bool = (v: unknown): boolean => typeof v === 'boolean' ? v : bad();
 const nullableNum = (v: unknown): number | null => v === null ? null : num(v);
-const nullableStr = (v: unknown): string | null => v === null ? null : str(v);
-const list = <T>(v: unknown, decode: Decoder<T>): T[] => Array.isArray(v) ? v.map(decode) : bad();
+export const nullableStr = (v: unknown): string | null => v === null ? null : str(v);
+export const list = <T>(v: unknown, decode: Decoder<T>): T[] => Array.isArray(v) ? v.map(decode) : bad();
 const titleRef = (v: unknown): (Obj & { title: string }) | null => v === null ? null : { ...object(v), title: str(object(v).title) };
 
 /** 타임아웃·화면 이탈을 취소하며, 인증 요청을 다른 주소로 자동 재전송하지 않습니다. */

@@ -29,8 +29,10 @@ export const COLORS = {
   
     // 화면 레이아웃
     screenPadding: 24,
-    headerHeight: 56,
+    headerHeight: 54,
     contentMaxWidth: 390,
+    wideViewport: 768,
+    tabsHeight: 68,
   
     // 입력창 및 버튼 크기
     inputHeight: 54,
@@ -40,34 +42,40 @@ export const COLORS = {
   // satisfies로 글꼴 설정을 검사하면서 fontWeight 등의 구체 타입을 유지합니다.
   export const TYPOGRAPHY = {
     title: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_700Bold',
       fontSize: 22,
       lineHeight: 32,
       fontWeight: '700',
     },
     heading: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_700Bold',
       fontSize: 18,
       lineHeight: 26,
       fontWeight: '700',
     },
     label: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_700Bold',
       fontSize: 14,
       lineHeight: 22,
       fontWeight: '700',
     },
     body: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_400Regular',
       fontSize: 14,
       lineHeight: 22,
     },
     small: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_400Regular',
       fontSize: 12,
       lineHeight: 18,
     },
     micro: {
+      includeFontPadding: false,
       fontFamily: 'NotoSansKR_500Medium',
       fontSize: 10,
       lineHeight: 16,

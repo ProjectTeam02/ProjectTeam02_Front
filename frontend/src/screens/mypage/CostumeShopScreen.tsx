@@ -1,7 +1,7 @@
 /** 실제 코스튬 상품 목록과 구매 API를 연결합니다. 구매·코인 차감은 서버 응답만 사용합니다. */
 import { useRef, useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { COLORS } from '../../constants/theme';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import * as Crypto from 'expo-crypto';
@@ -10,11 +10,11 @@ import { Body, Empty, Heading, LinkRow, Notice, Row } from '../../components/ui/
 import { ApiStatus } from '../../components/ui/ApiStatus';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
-import { useBackend, useBackendAction } from '../../hooks/useBackend';
+import { useBackendAction } from '../../hooks/useBackend';
 import { useBackendProfile } from '../../context/BackendProfileContext';
-import { COSTUME_PATHS, costumesDecoder, costumeDecoder, purchaseDecoder, type Costume } from '../../services/costumeApi';
-import LerenCharacter from '../../components/common/LerenCharacter';
-import { getCostumeImage } from '../../constants/costumeImages';
+import { COSTUME_PATHS, costumesDecoder, costumeDecoder, purchaseDecoder, inventoryDecoder, type Costume } from '../../services/costumeApi';
+import { CostumeArt, CostumeTile, CostumeShowcase, costumeGrid } from '../../components/game/CostumeDisplay';
+import { useLearningQuery } from '../../hooks/useLearningQuery';
 
 export default function CostumeShopScreen() {
   const [page, setPage] = useState(1);
@@ -26,11 +26,12 @@ export default function CostumeShopScreen() {
   const [pendingItemId, setPendingItemId] = useState<string | null>(null);
   const request = useRef<{ itemId: string; requestId: string } | null>(null);
   const profile = useBackendProfile();
-  const shop = useBackend(`${COSTUME_PATHS.shop}?page=${page}&size=10`, costumesDecoder);
-  const detail = useBackend(detailId ? COSTUME_PATHS.detail(detailId) : null, costumeDecoder);
+  const shop = useLearningQuery(`${COSTUME_PATHS.shop}?page=${page}&size=10`, costumesDecoder);
+  const detail = useLearningQuery(detailId ? COSTUME_PATHS.detail(detailId) : null, costumeDecoder);
   const action = useBackendAction();
   // 공용 코스튬은 서버가 반환한 페이지의 상품을 모두 표시합니다.
   const displayedItems = shop.data?.items ?? [];
+  const inventory = useLearningQuery(COSTUME_PATHS.inventory, inventoryDecoder);
   const totalPages = shop.data ? Math.ceil(shop.data.total / shop.data.size) : 0;
 
   const purchase = (item: Costume) => {
@@ -52,60 +53,66 @@ export default function CostumeShopScreen() {
       if (result) {
         request.current = null;
         setReceipt({ item, balance: result.coinBalance, spent: item.priceCoin });
-        shop.reload(); detail.reload(); profile.reload();
+        shop.reload(); detail.reload(); inventory.reload(); profile.reload();
       }
     } finally { setPendingItemId(null); }
   };
 
+  const balance = profile.data?.coinBalance;
+  const item = detail.data;
+  const missing = item?.priceCoin != null && balance != null ? Math.max(0, item.priceCoin - balance) : 0;
+  const priceLabel = (product: Costume) => product.owned ? '보유 중' : product.priceCoin === null ? '구매 불가' : product.priceCoin.toLocaleString() + ' 코인';
+  const [featured, ...others] = displayedItems;
+  const dismiss = () => { setDetailId(null); setMessage(''); };
   if (receipt) return <Screen title="구매 완료" tabs onBack={() => setReceipt(null)}>
-    <LerenCard title={receipt.item.name} variant="reward">
-      <LerenCharacter source={getCostumeImage(receipt.item.costumeCode, receipt.item.name)} size={120} />
-      <Heading>옷장에 추가했어요</Heading>
-      {receipt.spent !== null && <Body>사용한 코인 · {receipt.spent.toLocaleString()}개</Body>}
-      <Body>남은 코인 · {receipt.balance.toLocaleString()}개</Body>
-    </LerenCard>
-    <LerenButton title="옷장에서 입어보기" onPress={() => router.push('/wardrobe')} />
-    <LerenButton title="상점으로" variant="secondary" onPress={() => { setReceipt(null); setDetailId(null); }} />
+    <CostumeArt item={receipt.item} size={150} height={202} />
+    <Heading>{receipt.item.name}</Heading><Body>내 옷장에 추가했어요.</Body>
+    <LerenCard variant="reward">{receipt.spent !== null && <Body>사용한 코인 · {receipt.spent.toLocaleString()}개</Body>}
+      <Body>남은 코인 · {receipt.balance.toLocaleString()}개</Body></LerenCard>
+    <LerenButton title="내 옷장 보기" onPress={() => router.push('/wardrobe')} />
+    <LerenButton title="상점으로" variant="secondary" onPress={() => { setReceipt(null); dismiss(); }} />
   </Screen>;
-  return <Screen title={detailId ? '코스튬 상세' : '코스튬 상점'} back tabs onBack={detailId ? () => setDetailId(null) : undefined}>
-    <ConfirmDialog visible={confirmItem !== null} title="코스튬 구매" message={confirmItem ? `${confirmItem.name}\n가격: ${confirmItem.priceCoin?.toLocaleString()}코인\n구매하면 실제 코인이 차감됩니다.` : ''} confirmLabel="구매하기" busy={action.busy || pendingItemId !== null} onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmPurchase(confirmItem); }} />
+  return <Screen title={detailId ? '코스튬 상세' : '코스튬 상점'} tabs onBack={detailId ? dismiss : undefined}>
+    <ConfirmDialog visible={!!confirmItem} title="코스튬을 구매할까요?" message={confirmItem?.name ?? ''} confirmLabel="구매하기" busy={action.busy || !!pendingItemId}
+      onCancel={() => setConfirmItem(null)} onConfirm={() => { if (confirmItem) void confirmPurchase(confirmItem); }}>
+      {confirmItem && <><CostumeArt item={confirmItem} size={88} height={100} />
+        <Body>상품 가격 · {priceLabel(confirmItem)}</Body>
+        {balance != null && confirmItem.priceCoin != null && <Body>구매 후 잔액 · {(balance - confirmItem.priceCoin).toLocaleString()} 코인</Body>}</>}
+    </ConfirmDialog>
     <ApiStatus resource={profile} label="보유 코인" />
-    {profile.data && <LerenCard title={`보유 코인 ${profile.data.coinBalance?.toLocaleString() ?? '확인 불가'}개`}
-      description="내 지갑" variant="info" />}
-    <ApiStatus resource={shop} label="코스튬 상품 목록" empty={shop.data?.total === 0} />
-    {!!detailId && <LerenCard title="코스튬 상세">
-      <ApiStatus resource={detail} label="코스튬 상세" />
-      {detail.data && <>
-        <LerenCharacter source={getCostumeImage(detail.data.costumeCode, detail.data.name)} size={120} accessibilityLabel={detail.data.name} />
-        <Body>{detail.data.name}</Body>
-        <Body>{detail.data.description ?? '설명이 없습니다.'}</Body>
-        {!!detail.data.flavorText && <Body muted>{detail.data.flavorText}</Body>}
-        <Body>가격: {detail.data.priceCoin === null ? '구매 불가' : `${detail.data.priceCoin.toLocaleString()}코인`}</Body>
-        <LerenButton title={detail.data.owned ? '보유 중' : '구매하기'} disabled={detail.data.owned || detail.data.priceCoin === null || action.busy || pendingItemId !== null} onPress={() => purchase(detail.data!)} />
-      </>}
-      <LerenButton title="상세 닫기" variant="secondary" onPress={() => setDetailId(null)} />
-    </LerenCard>}
     {!!message && <Notice tone={noticeError ? 'error' : 'success'}>{message}</Notice>}
-    {!!action.error && <Notice tone="error">구매 요청 확인 필요: {action.error} 구매 내역을 확인하기 전에는 반복해서 구매하지 마세요.</Notice>}
-    {shop.data?.total === 0 && <Empty title="판매 중인 코스튬이 없어요" description="새로운 코스튬이 등록되면 이곳에서 확인할 수 있어요." />}
-    {!detailId && shop.data && displayedItems.length > 0 && <>
-      <Heading>코스튬 컬렉션 · 총 {shop.data.total}종</Heading>
-      <View style={s.grid}>{displayedItems.map(item => <Pressable key={item.itemId} accessibilityRole="button"
-        accessibilityLabel={item.name + ' 상세 보기'} onPress={() => setDetailId(item.itemId)} style={s.item}>
-        <LerenCharacter source={getCostumeImage(item.costumeCode, item.name)} size={95} accessibilityLabel={item.name} />
-        <Body>{item.name}</Body>
-        <Body muted>{item.owned ? '보유 중' : item.priceCoin === null ? '구매 불가' : item.priceCoin.toLocaleString() + ' 코인'}</Body>
-      </Pressable>)}</View>
+    {!!action.error && <Notice tone="error">{action.error}</Notice>}
+    {detailId ? <>
+      <ApiStatus resource={detail} label="코스튬 상세" />
+      {item && <>
+        <CostumeArt item={item} size={176} height={249} />
+        <Heading>{item.name}</Heading>{!!item.description && <Body muted>{item.description}</Body>}
+        {!!item.flavorText && <Body muted>{item.flavorText}</Body>}
+        <LerenCard><Body>상품 가격 · {item.priceCoin == null ? '구매 불가' : item.priceCoin.toLocaleString() + ' 코인'}</Body>
+          <Body>내 코인 · {balance?.toLocaleString() ?? '—'}</Body></LerenCard>
+        {item.owned ? <LerenButton title="내 옷장 보기" onPress={() => router.push('/wardrobe')} />
+          : missing > 0 ? <><LerenCard variant="reward" title={missing.toLocaleString() + '코인이 더 필요해요'} />
+            <LerenButton title="탐험에서 코인 모으기" onPress={() => router.push('/explore')} /></>
+          : <LerenButton title={item.priceCoin == null ? '구매 불가' : item.priceCoin.toLocaleString() + '코인으로 구매하기'} disabled={item.priceCoin == null || action.busy || !!pendingItemId} loading={action.busy} onPress={() => purchase(item)} />}
+      </>}
+      <LerenButton title="다른 코스튬 보기" variant="secondary" onPress={dismiss} />
+    </> : <>
+      <View style={s.balance}><Body>내 코인</Body><Heading>{balance?.toLocaleString() ?? '—'} 코인</Heading></View>
+      <ApiStatus resource={shop} label="코스튬 상품 목록" />
+      {shop.data && <View style={s.heading}><Heading>코스튬 컬렉션</Heading><Body muted>총 {shop.data.total}종</Body></View>}
+      {featured && <CostumeShowcase item={featured} title={featured.name} description={featured.description ?? undefined} status={priceLabel(featured)} onPress={() => setDetailId(featured.itemId)} />}
+      <View style={costumeGrid.row}>{others.map(product => <CostumeTile key={product.itemId} item={product} shop label={priceLabel(product)} onPress={() => setDetailId(product.itemId)} />)}</View>
+      {shop.data?.total === 0 && <Empty title="판매 중인 코스튬이 없어요" />}
       {totalPages > 1 && <Row>
         <LerenButton title="이전" style={s.page} variant="secondary" disabled={page <= 1} onPress={() => setPage(v => v - 1)} />
         <LerenButton title={`다음 (${page}/${totalPages})`} style={s.page} variant="secondary" disabled={page >= totalPages} onPress={() => setPage(v => v + 1)} />
       </Row>}
+      <LinkRow title="내 옷장" subtitle={inventory.data ? inventory.data.items.length + '개 보유' : '보유한 코스튬 보기'} onPress={() => router.push('/wardrobe')} />
     </>}
-    <LinkRow title="내 옷장" subtitle="보유한 코스튬 보기" onPress={() => router.push('/wardrobe')} />
   </Screen>;
 }
 const s = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  item: { width: '48%', alignItems: 'center', gap: 6, padding: 10, borderRadius: 14, borderWidth: 1, borderColor: COLORS.line },
+  balance: { minHeight: 52, paddingHorizontal: 16, gap: 8, borderRadius: 12, backgroundColor: COLORS.soft, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heading: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   page: { flex: 1, width: undefined },
 });

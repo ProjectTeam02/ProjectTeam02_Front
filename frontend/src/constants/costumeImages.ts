@@ -9,6 +9,8 @@ export const COSTUME_IMAGES = {
 
 const IMAGE_BY_CODE: Record<string, ImageSourcePropType> = {
   BLUE_DAWN_ROBE: COSTUME_IMAGES.blueDawn,
+  STARLIGHT_ROBE: COSTUME_IMAGES.starlight,
+  GOLDEN_GUARDIAN: COSTUME_IMAGES.guardian,
 };
 
 const IMAGE_BY_NAME: Record<string, ImageSourcePropType> = {

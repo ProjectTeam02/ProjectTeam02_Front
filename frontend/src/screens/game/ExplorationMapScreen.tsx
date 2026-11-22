@@ -1,7 +1,7 @@
 /** 경제 대륙 지도에서 실제 주제 ID로 단계 목록을 엽니다. */
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { ImageBackground, StyleSheet } from 'react-native';
+import { ImageBackground, StyleSheet, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Body, Heading, LinkRow } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
@@ -32,15 +32,15 @@ export default function ExplorationMapScreen() {
   const items = topics.data?.items ?? [];
   const [lockedTopic, setLockedTopic] = useState<Topic | null>(null);
   const [region, setRegion] = useState<{ topic: Topic; message: string } | null>(null);
-  return <Screen title="경제 탐험" tabs contentPadding={14}
+  return <Screen title="경제 탐험" tabs
     right={topics.status === 'success' && items.length > 0 && <ApiStatus resource={topics} label="학습 주제" />}
     footer={region && <>
     <Body>{region.topic.title} · {region.message}</Body>
     <LerenButton title={region.topic.title + ' 단계 보기'} onPress={() => { setRegion(null); openTopic(region.topic); }} />
   </>}>
     <ConfirmDialog visible={!!lockedTopic} title={lockedTopic?.title + ' · 잠긴 지역'} message="선수 주제를 완료하면 이 지역이 열려요." confirmLabel="단계 살펴보기" cancelLabel="지도 보기" onCancel={() => setLockedTopic(null)} onConfirm={() => { if (lockedTopic) openTopic(lockedTopic); setLockedTopic(null); }} />
-    <Heading>경제 대륙 지도</Heading>
-    {items.length > 0 && <Body muted>아래로 스크롤해 {items.length}개 지역을 탐험하세요.</Body>}
+    <View style={s.intro}><View style={s.introTitle}><Heading>경제 대륙 지도</Heading></View>
+    {items.length > 0 && <Body muted style={s.introDescription}>아래로 스크롤해 {items.length}개 지역을 탐험하세요.</Body>}</View>
     {(topics.status !== 'success' || !items.length) && <ApiStatus resource={topics} label="학습 주제" empty={items.length === 0} />}
     {items.some(onMap) && <ImageBackground source={continentImage} imageStyle={s.image} style={s.map}>
       {items.filter(onMap).map(topic => <Region key={topic.topicId} topic={topic} onSelect={(message, locked) => { if (locked) { setRegion(null); setLockedTopic(topic); } else setRegion({ topic, message }); }} />)}
@@ -50,8 +50,11 @@ export default function ExplorationMapScreen() {
   </Screen>;
 }
 const s = StyleSheet.create({
+  intro: { marginHorizontal: 6, gap: 2 },
+  introTitle: { minHeight: 39, justifyContent: 'center' },
+  introDescription: { minHeight: 24 },
   image: { width: '100%', height: '100%' },
   map: { width: '100%', aspectRatio: 362 / 1086, overflow: 'hidden', borderRadius: 14 },
-  card: { position: 'absolute', width: '49%', minHeight: 58, paddingVertical: 5, paddingHorizontal: 10, gap: 1 },
-  right: { right: '2%' }, left: { left: '2%' },
+  card: { position: 'absolute', width: '50.55%', minHeight: 76, paddingVertical: 5, paddingHorizontal: 10, gap: 1 },
+  right: { right: '2.5%' }, left: { left: '2.5%' },
 });

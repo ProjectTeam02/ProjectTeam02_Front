@@ -70,14 +70,14 @@ export default function SignupScreen({ onSignup, onLogin }: SignupScreenProps = 
 
   return (
     <Screen title="회원가입">
-      <LerenInput label="이메일" value={email} onChangeText={value => { setEmail(value); setError(''); }} placeholder="이메일을 입력해 주세요" keyboardType="email-address" autoComplete="email" error={email.length > 0 && !emailValid ? '255자 이내의 이메일을 입력해 주세요' : ''} editable={!busy} />
-      <LerenInput label="비밀번호" value={password} onChangeText={value => { setPassword(value); setError(''); }} placeholder="비밀번호를 입력해 주세요" secure autoComplete="new-password" error={password.length > 0 && !passwordValid ? '비밀번호를 8~128자로 입력해 주세요' : ''} editable={!busy} />
-      <LerenInput label="비밀번호 확인" value={confirm} onChangeText={value => { setConfirm(value); setError(''); }} placeholder="비밀번호를 다시 입력해 주세요" secure autoComplete="new-password" error={mismatch ? '비밀번호가 일치하지 않아요' : ''} editable={!busy} />
-      <LerenInput label="닉네임" value={nickname} onChangeText={value => { changeNickname(value); setError(''); }} placeholder="닉네임을 입력해 주세요" hint="모험에서 사용할 이름이에요. 1~30자로 입력해 주세요." error={nickname.length > 0 && !nicknameValid ? '닉네임을 1~30자로 입력해 주세요' : ''} editable={!busy} />
+      <LerenInput label="이메일" value={email} onChangeText={value => { setEmail(value); setError(''); }} placeholder="입력해 주세요" hint={!email ? '예: leren@example.com' : undefined} keyboardType="email-address" autoComplete="email" error={email.length > 0 && !emailValid ? '255자 이내의 이메일을 입력해 주세요' : ''} editable={!busy} />
+      <LerenInput label="비밀번호" value={password} onChangeText={value => { setPassword(value); setError(''); }} placeholder="입력해 주세요" hint={!password ? '8자 이상 입력해 주세요' : undefined} secure autoComplete="new-password" error={password.length > 0 && !passwordValid ? '비밀번호를 8~128자로 입력해 주세요' : ''} editable={!busy} />
+      <LerenInput label="비밀번호 확인" value={confirm} onChangeText={value => { setConfirm(value); setError(''); }} placeholder="입력해 주세요" secure autoComplete="new-password" error={mismatch ? '비밀번호가 일치하지 않아요' : ''} editable={!busy} />
+      <LerenInput label="닉네임" value={nickname} onChangeText={value => { changeNickname(value); setError(''); }} placeholder="입력해 주세요" hint="모험에서 사용할 이름이에요. 1~30자로 입력해 주세요." error={nickname.length > 0 && !nicknameValid ? '닉네임을 1~30자로 입력해 주세요' : ''} editable={!busy} />
       {!!error && <Notice tone="error">{error}</Notice>}
       <LerenButton title={busy ? '계정을 만드는 중...' : '계정 만들기'} disabled={!ready || busy} loading={busy} onPress={() => { void submit(); }} />
       <LerenLinkCard title="이미 계정이 있나요?" subtitle="로그인" onPress={goToLogin} />
     </Screen>
   );
 }
-const styles = StyleSheet.create({ hint: { ...TYPOGRAPHY.micro, color: COLORS.muted, marginTop: 8 } });
+const styles = StyleSheet.create({ hint: { ...TYPOGRAPHY.small, color: COLORS.muted } });
