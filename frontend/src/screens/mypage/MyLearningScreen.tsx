@@ -63,7 +63,7 @@ export default function MyLearningScreen() {
     </View>
     <Heading>나의 기록</Heading>
     <View style={{ borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, overflow: 'hidden' }}>
-      <Menu icon="BookOpen" title="오답 노트" subtitle="틀린 문제" onPress={() => router.push('/review')} />
+      <Menu icon="BookOpen" title="오답 노트" subtitle="틀린 문제" onPress={() => router.push({ pathname: '/review', params: { filter: 'WRONG' } })} />
       <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />
       <Menu icon="History" title="학습 이력" subtitle="완료 · 응시 내역" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'history' } })} />
       <View style={{ height: 1, backgroundColor: COLORS.line, marginHorizontal: 12 }} />

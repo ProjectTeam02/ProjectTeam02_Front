@@ -1,111 +1,87 @@
-/**
- * 백엔드에서 받은 문항 중 로컬 오답·헷갈림 ID에 해당하는 문제를 모아 다시 풉니다.
- * 프론트에 별도 문제·해설 사본을 두지 않으며 재풀이에서 보상은 지급하지 않습니다.
- * 헷갈림은 직접 해제할 때까지 유지하고, 오답 해제 정책은 서버 협의 전까지 자동 적용하지 않습니다.
- */
-import React, { useMemo, useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+/** 복습 노트의 오답·북마크와 도래한 임무를 로그인한 사용자의 서버 기록으로 표시합니다. */
+import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import Screen from '../../components/ui/Screen';
-import LearningContentState from '../../components/ui/LearningContentState';
-import { Body, Chip, Empty, Heading, LinkRow, Progress } from '../../components/ui/Primitives';
+import { ApiStatus } from '../../components/ui/ApiStatus';
+import { Body, Chip, Empty, Heading, LinkRow, Notice, Row } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
 import LerenCard from '../../components/common/LerenCard';
-import LerenCheck from '../../components/common/LerenCheck';
-import LerenOption from '../../components/common/LerenOption';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
-import { useLearningProgress } from '../../context/LearningProgressContext';
-import { useLearningContent } from '../../context/LearningContentContext';
-import type { LearningQuestion } from '../../types/learning';
+import ReviewBookmark from '../../components/game/ReviewBookmark';
+import ReviewMissionScreen from './ReviewMissionScreen';
+import { useAuth } from '../../context/AuthContext';
+import { useLearningQuery } from '../../hooks/useLearningQuery';
+import { useBackendAction } from '../../hooks/useBackend';
+import { isLearningId } from '../../services/learningApi';
+import { dueMissions, REVIEW, reviewAttempt, reviewPage, type ReviewFilter, type ReviewItem } from '../../services/reviewApi';
 
-type Filter = '전체' | '오답' | '헷갈림';
+const filters = { ALL: '전체', WRONG: '오답', BOOKMARK: '헷갈림' } as const;
+// 임무 목록에는 응시 ID가 없으므로 현재 로그인 세션에서 이미 시작한 응시를 기억합니다.
+const attemptsBySession = new WeakMap<object, Map<string, string>>();
 
 export default function ReviewScreen() {
-  return <LearningContentState title="복습 노트"><ReviewContent /></LearningContentState>;
+  const params = useLocalSearchParams<{ attemptId?: string; filter?: string }>();
+  const { session } = useAuth();
+  if (params.attemptId) {
+    return isLearningId(params.attemptId)
+      ? <ReviewMissionScreen key={params.attemptId} attemptId={params.attemptId} />
+      : <Screen title="복습 임무" tabs><Empty title="복습 임무를 찾을 수 없어요" action="복습 노트 보기" onPress={() => router.replace('/review')} /></Screen>;
+  }
+  const filter = params.filter === 'WRONG' || params.filter === 'BOOKMARK' ? params.filter : 'ALL';
+  return <Notebook key={JSON.stringify([session?.user.userId, filter])} initialFilter={filter} />;
 }
 
-function ReviewContent() {
-  const params = useLocalSearchParams<{ mode?: string; question?: string }>();
-  const { getBattleQuestions, getQuestion } = useLearningContent();
-  const { wrongQuestionIds, flaggedQuestionIds, toggleFlag, lastResult } = useLearningProgress();
-  const resultMode = params.mode === 'result' && !!lastResult;
-  const [filter, setFilter] = useState<Filter>('전체');
-  const [queue, setQueue] = useState<string[]>(params.question ? [params.question] : []);
-  const [index, setIndex] = useState(0);
-  const [selected, setSelected] = useState<number | null>(null);
-  const [feedback, setFeedback] = useState(false);
-  const [done, setDone] = useState(false);
-  const [score, setScore] = useState(0);
-  const submitted = useRef(false);
-  const candidates = resultMode ? getBattleQuestions(lastResult.stepId, lastResult.boss).slice(0, lastResult.total).map((question) => question.id) : [...new Set([...wrongQuestionIds, ...flaggedQuestionIds])];
-  // 백엔드에서 더 이상 제공하지 않는 문항은 오래된 로컬 ID만으로 재생성하지 않습니다.
-  const ids = candidates.filter((id) => !!getQuestion(id));
-  const filtered = ids.filter((id) => filter === '전체' || (filter === '오답' ? (resultMode ? lastResult.wrongQuestionIds : wrongQuestionIds).includes(id) : flaggedQuestionIds.includes(id)));
-  const questions = filtered.map(getQuestion).filter((question): question is LearningQuestion => !!question);
-  const question = getQuestion(queue[index] || '');
-  // 원래 정답 번호는 보관하고, 재풀이에서는 보기 순서만 회전합니다.
-  const choices = useMemo(() => {
-    if (!question) return [];
-    const offset = question.id.length % (question.choices.length - 1) + 1;
-    return question.choices.map((title, originalIndex) => ({ title, originalIndex })).slice(offset).concat(question.choices.map((title, originalIndex) => ({ title, originalIndex })).slice(0, offset));
-  }, [question]);
-
-  const start = (id: string) => {
-    const nextQueue = [id, ...questions.map((item) => item.id).filter((item) => item !== id)];
-    setQueue(nextQueue); setIndex(0); setSelected(null); setFeedback(false); setDone(false); setScore(0); submitted.current = false;
-  };
-  const submit = () => {
-    if (selected === null || !question || submitted.current) return;
-    submitted.current = true;
-    if (selected === question.answer) setScore((old) => old + 1);
-    setFeedback(true);
-  };
-  const next = () => {
-    if (index === queue.length - 1) setDone(true);
-    else { setIndex((old) => old + 1); setSelected(null); setFeedback(false); submitted.current = false; }
+function Notebook({ initialFilter }: { initialFilter: ReviewFilter }) {
+  const { session } = useAuth();
+  const [filter, setFilter] = useState(initialFilter);
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<ReviewItem | null>(null);
+  const items = useLearningQuery(REVIEW.items(filter, page), reviewPage);
+  const missions = useLearningQuery(REVIEW.due, dueMissions);
+  const start = useBackendAction();
+  const openMission = async (missionId: string) => {
+    if (!session) return;
+    const previous = attemptsBySession.get(session)?.get(missionId);
+    let attemptId = previous;
+    if (!attemptId) {
+      const attempt = await start.run(REVIEW.start(missionId), reviewAttempt, 'POST');
+      if (!attempt) return;
+      attemptId = attempt.attemptId;
+      const cache = attemptsBySession.get(session) ?? new Map<string, string>();
+      cache.set(missionId, attemptId);
+      attemptsBySession.set(session, cache);
+    }
+    router.push({ pathname: '/review', params: { attemptId } });
   };
 
-  if (queue.length > 0 && !question) return <Screen title="복습 문항" back tabs onBack={() => setQueue([])}><Empty title="현재 제공되지 않는 문항이에요" description="백엔드에서 받은 복습 목록의 문항을 선택해 주세요." action="복습 목록 보기" onPress={() => setQueue([])} /></Screen>;
-
-  if (done) return <Screen title="복습 결과" back tabs onBack={() => { setDone(false); setQueue([]); }}>
-    <LerenCard title="복습을 마쳤어요!" description="헷갈렸던 개념을 한 번 더 정리했어요." variant="success" />
-    <View style={styles.stats}>{[[`${queue.length}개`, '푼 문제'], [`${score}개`, '맞힌 문제'], [`${Math.round(score / queue.length * 100)}%`, '정답률']].map(([value, label]) => <View key={label} style={styles.stat}><Text style={styles.value}>{value}</Text><Text style={styles.small}>{label}</Text></View>)}</View>
-    <Body muted>체크한 문항은 재풀이 정답만으로 자동 해제되지 않아요. 직접 해제한 문항의 체크는 꺼진 상태로 유지돼요.</Body>
-    <LerenButton title="복습 노트로 돌아가기" onPress={() => { setDone(false); setQueue([]); }} />
-    <LinkRow title="나의 학습 통계" subtitle="성장 확인하기" onPress={() => router.push('/statistics')} />
+  if (selected) return <Screen title="복습 문항" back tabs onBack={() => setSelected(null)}>
+    <Heading>{selected.title}</Heading>
+    {selected.choices.map((choice, i) => <Body key={choice.id}>{i + 1}. {choice.content}</Body>)}
+    <ReviewBookmark key={selected.questionId} questionId={selected.questionId} initial={selected.bookmarked}
+      onSaved={bookmarked => { setSelected({ ...selected, bookmarked }); items.reload(); }} />
+    <LinkRow title="AI 튜터에게 질문" onPress={() => router.push({ pathname: '/tutor', params: { concept: selected.conceptCode } })} />
+    <LerenButton title="복습 노트로 돌아가기" variant="secondary" onPress={() => setSelected(null)} />
   </Screen>;
 
-  if (question) return <Screen title={`${question.concept} 복습`} back tabs onBack={() => setQueue([])}>
-    <View style={styles.progress}><View style={styles.row}><Text style={styles.label}>복습 문제</Text><Text style={styles.small}>{index + 1} / {queue.length}</Text></View><Progress value={(index + 1) / queue.length} /></View>
-    {feedback ? <>
-      <LerenCard title={selected === question.answer ? '정답이에요!' : '다시 기억해 봐요'} description={`${question.explanation}\n정답: ${question.choices[question.answer]}`} variant={selected === question.answer ? 'success' : 'error'} />
-      <LerenCheck title={`${question.concept} 헷갈림 체크`} checked={flaggedQuestionIds.includes(question.id)} onChange={() => toggleFlag(question.id)} description="해제할 때까지 헷갈림 문항으로 유지돼요." />
-      <LerenButton title={index === queue.length - 1 ? '복습 결과 보기' : '다음 문항'} onPress={next} />
-      <LinkRow title="더 쉽게 설명해 주세요" subtitle="AI 튜터에게 질문" onPress={() => router.push({ pathname: '/tutor', params: { concept: question.concept } })} />
-      <Body muted>체크한 문항은 재풀이 정답만으로 자동 해제되지 않아요.</Body>
-    </> : <>
-      <Heading>{question.question}</Heading>
-      {choices.map((choice, choiceIndex) => <LerenOption key={choice.originalIndex} number={choiceIndex + 1} title={choice.title} state={selected === choice.originalIndex ? 'selected' : 'default'} onPress={() => setSelected(choice.originalIndex)} />)}
-      <LerenButton title="답 제출하기" disabled={selected === null} onPress={submit} />
-      <Body muted>정답을 고른 뒤 제출해 주세요.</Body>
-    </>}
-    <LerenButton title="문항 목록 보기" variant="secondary" onPress={() => setQueue([])} />
-  </Screen>;
-
-  return <Screen title={resultMode ? '문항별 결과' : '복습 노트'} back tabs>
-    <LerenCard title={resultMode ? '방금 푼 문제를 다시 확인해요' : '오답도, 헷갈린 문제도 다시 봐요'} description={resultMode ? `${lastResult.total}문제 · 정답 ${lastResult.correct}문제` : `오답 ${wrongQuestionIds.filter((id) => !!getQuestion(id)).length}문제 · 헷갈림 ${flaggedQuestionIds.filter((id) => !!getQuestion(id)).length}문제\n겹치는 문항을 합쳐 총 ${ids.length}문제`} variant="info" />
-    <View style={styles.row}>{(['전체', '오답', '헷갈림'] as const).map((item) => <Chip key={item} label={item} active={filter === item} onPress={() => setFilter(item)} />)}</View>
-    {questions.length ? questions.map((item) => {
-      const isWrong = resultMode ? lastResult.wrongQuestionIds.includes(item.id) : wrongQuestionIds.includes(item.id);
-      const previousWrong = resultMode && !isWrong && wrongQuestionIds.includes(item.id);
-      return <LinkRow key={item.id} title={item.concept} subtitle={`${isWrong ? '오답' : '정답'}${previousWrong ? ' · 이전 오답 기록' : ''}${flaggedQuestionIds.includes(item.id) ? ' · 헷갈림' : ''} · 개념 다시 보기`} onPress={() => start(item.id)} />;
-    }) : <Empty title={filter === '전체' ? '복습할 문제가 없어요' : `${filter} 문항이 없어요`} description="퀴즈를 풀고 헷갈리는 문제에 체크해 보세요." action="경제 탐험으로" onPress={() => router.push('/explore')} />}
-    {questions.length > 0 && <LerenButton title={`${questions.length}문제 복습 시작`} onPress={() => start(questions[0].id)} />}
+  const due = missions.data?.filter(m => m.status !== 'COMPLETED');
+  const entries = items.data?.items.filter(item => item.wrongCount > 0 || item.bookmarked);
+  return <Screen title="복습 노트" back tabs>
+    <Heading>오늘의 복습 임무</Heading>
+    <ApiStatus resource={missions} label="복습 임무" />
+    {due?.length === 0 && <Body muted>오늘 예정된 복습 임무가 없어요.</Body>}
+    {due?.map(m => <LerenButton key={m.missionId}
+      title={m.dueDate + ' · ' + m.count + '문제 ' + (session && attemptsBySession.get(session)?.has(m.missionId) ? '이어풀기' : '복습하기')}
+      disabled={start.busy} onPress={() => void openMission(m.missionId)} />)}
+    {!!start.error && <Notice tone="error">{start.error}</Notice>}
+    <LerenCard title="오답·헷갈림 노트" description="틀렸거나 헷갈림에 저장한 문제를 다시 확인해요." variant="info" />
+    <Row>{(Object.keys(filters) as ReviewFilter[]).map(key => <Chip key={key} label={filters[key]} active={filter === key}
+      onPress={() => { setPage(1); setFilter(key); }} />)}</Row>
+    <ApiStatus resource={items} label="복습 문항" />
+    {entries?.map(item => <LinkRow key={item.questionId} title={item.title}
+      subtitle={[item.wrongCount > 0 && '오답 ' + item.wrongCount + '회', item.bookmarked && '헷갈림'].filter(Boolean).join(' · ')}
+      onPress={() => setSelected(item)} />)}
+    {entries?.length === 0 && <Empty title={items.data && items.data.total > items.data.size ? '이 페이지에 표시할 문항이 없어요' : '저장된 복습 문항이 없어요'} />}
+    {page > 1 && <LerenButton title="이전 페이지" variant="secondary" onPress={() => setPage(page - 1)} />}
+    {items.data && page * items.data.size < items.data.total && <LerenButton title="다음 페이지" variant="secondary" onPress={() => setPage(page + 1)} />}
     <LinkRow title="개념별 학습 통계" subtitle="강점과 취약 개념 보기" onPress={() => router.push({ pathname: '/statistics', params: { tab: 'concepts' } })} />
   </Screen>;
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 }, progress: { gap: 7 }, label: { ...TYPOGRAPHY.label, color: COLORS.ink, flex: 1 },
-  small: { ...TYPOGRAPHY.small, color: COLORS.muted }, stats: { flexDirection: 'row', gap: 8 }, stat: { flex: 1, padding: 12, backgroundColor: COLORS.soft, borderRadius: 12, gap: 6 }, value: { ...TYPOGRAPHY.heading, color: COLORS.primary },
-});

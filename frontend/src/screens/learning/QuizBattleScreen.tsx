@@ -2,6 +2,7 @@
 import { randomUUID } from 'expo-crypto';
 import { useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+import ReviewBookmark from '../../components/game/ReviewBookmark';
 import BattleScene from '../../components/game/BattleScene';
 import { heroImage } from '../../constants/heroImage';
 import Screen from '../../components/ui/Screen';
@@ -85,6 +86,7 @@ export default function QuizBattleScreen() {
               onPress={() => setSelection({ questionId: question.id, choiceId: choice.id })} />)}
             {shownFeedback ? <>
               <Notice tone={shownFeedback.isCorrect ? 'success' : 'error'}>{shownFeedback.isCorrect ? '정답입니다.' : '오답입니다.'}</Notice>
+              <ReviewBookmark key={question.id} questionId={question.id} />
               <LerenCard title="해설" description={shownFeedback.explanation ?? '등록된 해설이 없습니다.'} />
               <LerenButton title={shownFeedback.status === 'IN_PROGRESS' ? '다음 문제' : '저장된 결과 보기'} onPress={() => {
                 if (shownFeedback.status === 'IN_PROGRESS') attempt.reload(); else openResult(shownFeedback.attemptId);

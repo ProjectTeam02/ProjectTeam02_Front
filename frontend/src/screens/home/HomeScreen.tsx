@@ -87,7 +87,6 @@ export default function HomeScreen() {
   const firstLesson = !resume && !continuing && p?.completedStageCount === 0 && history.data?.total === 0;
   const completedToday = daily?.hasCompletedLearning === true;
   const portrait = heroImage(p?.characterClass);
-  const hasReview = (history.data?.total ?? 0) > 0;
   const allStagesDone = items.length > 0 && done === items.length;
   const hasActiveLearning = !!resume || continuing;
   const view = firstLesson ? 'first' : hasActiveLearning ? 'resume' : completedToday ? 'completed' : allStagesDone ? 'review' : 'default';
@@ -202,9 +201,9 @@ export default function HomeScreen() {
       </HomeSection>
       <HomeSection title="학습 바로가기">
         <HomeLinks>
-          <HomeLink title="오늘의 복습" detail={hasReview ? '학습 기록' : '기록 없음'} onPress={() => router.push('/review')} />
+          <HomeLink title="오늘의 복습" detail="복습 노트 보기" onPress={() => router.push('/review')} />
           <HomeLink title="학습 달력" detail="이번 달 기록" onPress={() => router.push('/calendar')} />
-          <HomeLink title="전체 탐험 지도" detail="9개 지역" onPress={() => router.push('/explore')} />
+          <HomeLink title="전체 탐험 지도" detail="9개 지역" last onPress={() => router.push('/explore')} />
         </HomeLinks>
       </HomeSection>
     </>}

@@ -47,7 +47,7 @@ export default function Screen({ title, children, back = true, tabs = false, foo
     if (router.canGoBack()) router.back(); else router.replace('/home');
   };
   // 복습과 시안 안내를 요청한 화면에서는 실제 서버 기록에 반영되지 않는다는 안내를 표시합니다.
-  const showPreview = preview || pathname === '/review';
+  const showPreview = preview;
   const body = <View style={[styles.content, bodySpacing[pathname], illustratedStage && styles.stageContent, !scroll && styles.flex]}>{showPreview ? <Notice>미리보기 · 이 화면의 활동은 회원 기록이나 보상에 반영되지 않아요.</Notice> : null}{children}</View>;
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom', 'left', 'right']}>
