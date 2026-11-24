@@ -1,7 +1,6 @@
 /** 지역 번호와 완료 단계 수로 Figma 원본을 선택합니다. 새 지역 그림은 이 표에 등록합니다. */
 import type { ImageSourcePropType } from 'react-native';
 
-export const continentImage = require('../../assets/stages/economic_continent.png');
 const backgrounds: Partial<Record<number, readonly ImageSourcePropType[]>> = {
   1: [
     require('../../assets/stages/stage_01_0.png'),
