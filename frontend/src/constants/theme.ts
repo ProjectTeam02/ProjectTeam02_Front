@@ -40,46 +40,45 @@ export const COLORS = {
   };
   
   // satisfies로 글꼴 설정을 검사하면서 fontWeight 등의 구체 타입을 유지합니다.
-  export const TYPOGRAPHY = {
-    title: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_700Bold',
-      fontSize: 22,
-      lineHeight: 32,
-      fontWeight: '700',
-    },
-    heading: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_700Bold',
-      fontSize: 18,
-      lineHeight: 26,
-      fontWeight: '700',
-    },
-    label: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_700Bold',
-      fontSize: 14,
-      lineHeight: 22,
-      fontWeight: '700',
-    },
-    body: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_400Regular',
-      fontSize: 14,
-      lineHeight: 22,
-    },
-    small: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_400Regular',
-      fontSize: 12,
-      lineHeight: 18,
-    },
-    micro: {
-      includeFontPadding: false,
-      fontFamily: 'NotoSansKR_500Medium',
-      fontSize: 10,
-      lineHeight: 16,
-      fontWeight: '500',
-    },
-  } satisfies Record<string, TextStyle>;
-  
+ export const TYPOGRAPHY = {
+  title: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_700Bold',
+    fontSize: 24,
+    lineHeight: 34,
+    fontWeight: '700',
+  },
+  heading: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_700Bold',
+    fontSize: 20,
+    lineHeight: 28,
+    fontWeight: '700',
+  },
+  label: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_700Bold',
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '700',
+  },
+  body: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_400Regular',
+    fontSize: 16,
+    lineHeight: 25,
+  },
+  small: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_400Regular',
+    fontSize: 14,
+    lineHeight: 21,
+  },
+  micro: {
+    includeFontPadding: false,
+    fontFamily: 'NotoSansKR_500Medium',
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+} satisfies Record<string, TextStyle>;
