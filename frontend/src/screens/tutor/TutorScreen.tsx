@@ -94,7 +94,6 @@ export default function TutorScreen() {
         : health.data && health.data.fastapi !== 'CONNECTED' && <Notice>튜터가 잠시 응답할 수 없어요. 잠시 후 다시 시도해 주세요.</Notice>}
       {usage.status !== 'success' && <ApiStatus resource={usage} label="질문 한도" />}
       {health.status !== 'success' && <ApiStatus resource={health} label="튜터 상태" />}
-      {usage.data && health.data && <Chip label="튜터 상태 새로고침" onPress={() => { usage.reload(); health.reload(); }} />}
       {conversation && action.busy && <Body muted>튜터가 답변을 작성하고 있어요…</Body>}
     </>}
     {!!notice && <Notice tone="success">{notice}</Notice>}{!!action.error && <Notice tone="error">{action.error}</Notice>}
