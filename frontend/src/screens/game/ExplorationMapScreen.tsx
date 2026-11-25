@@ -11,17 +11,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
-import {
-  Image,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-  type LayoutChangeEvent,
-  type ScrollViewInstance,
-} from 'react-native';
-
+import {Image,Pressable, ScrollView,StyleSheet,Text,View,type LayoutChangeEvent,type ScrollViewInstance,} from 'react-native';
 import Screen from '../../components/ui/Screen';
 import RegionInfoDialog from '../../components/game/RegionInfoDialog';
 import { ApiStatus } from '../../components/ui/ApiStatus';
@@ -260,7 +250,7 @@ export default function ExplorationMapScreen() {
             <Text style={styles.regionPillText}>현재 지역 {String(currentRegionNo).padStart(2, '0')}</Text>
           </View>
         </View>
-        <Text style={styles.hint}>아래쪽 '성장의 동굴'에서 시작해 위로 탐험하세요.</Text>
+        <Text style={styles.hint}>{"아래쪽 '성장의 동굴'에서 시작해 위로 탐험하세요."}</Text>
       </View>
       {topics.status === 'error' && <ApiStatus resource={topics} label="경제 학습 주제" />}
       <View style={styles.mapViewport} onLayout={onViewportLayout}>
