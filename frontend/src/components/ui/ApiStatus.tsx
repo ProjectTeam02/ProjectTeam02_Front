@@ -2,8 +2,6 @@
 import { Notice } from './Primitives';
 import LerenButton from '../common/LerenButton';
 import type { ApiResource } from '../../hooks/useBackend';
-import { Pressable, StyleSheet, Text } from 'react-native';
-import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { router, usePathname } from 'expo-router';
 export function ApiStatus<T>({ resource, label, empty = false }: { resource: ApiResource<T>; label: string; empty?: boolean }) {
   const diagnostics = usePathname() === '/connections';
@@ -18,5 +16,4 @@ export function ApiStatus<T>({ resource, label, empty = false }: { resource: Api
   if (!diagnostics) return null;
   return <><Notice tone="success">{label} · {empty ? 'API는 연결되었으나 실제 데이터가 없어 표시되지 않습니다.' : 'API 연결 및 조회에 성공했습니다.'}</Notice><LerenButton title={`${label} 새로고침`} variant="secondary" onPress={resource.reload} /></>;
 }
-const s = StyleSheet.create({ refresh: { alignSelf: 'flex-end', justifyContent: 'center', minHeight: 44, paddingHorizontal: 4 }, label: { ...TYPOGRAPHY.small, color: COLORS.muted } });
 export function Unconnected({ children }: { children: string }) { return <Notice>아직 미연결 · {children}</Notice>; }
