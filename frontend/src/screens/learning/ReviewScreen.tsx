@@ -18,6 +18,7 @@ import { STATISTICS_PATHS, conceptsDecoder } from '../../services/statisticsApi'
 import { dueMissions, loadNotebookItems, REVIEW, reviewAttempt, type ReviewFilter, type ReviewItem } from '../../services/reviewApi';
 
 const PAGE_SIZE = 10;
+const EMPTY_REVIEW_ITEMS: ReviewItem[] = [];
 // 임무 목록에는 진행 중인 응시 ID가 없어서, 같은 로그인 세션에서만 재사용합니다.
 const attemptsBySession = new WeakMap<object, Map<string, string>>();
 
@@ -71,10 +72,22 @@ function Notebook({ initialFilter }: { initialFilter: ReviewFilter }) {
   const [filter, setFilter] = useState<ReviewFilter>(initialFilter);
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<ReviewItem | null>(null);
-  const [items, setItems] = useState<ReviewItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
+  const [loadResult, setLoadResult] = useState<{
+    token: string;
+    reloadCount: number;
+    items: ReviewItem[];
+    error: string;
+  } | null>(null);
   const [reloadCount, setReloadCount] = useState(0);
+  const currentLoad = loadResult &&
+    loadResult.token === token &&
+    loadResult.reloadCount === reloadCount
+    ? loadResult : null;
+  const items = currentLoad?.items ?? EMPTY_REVIEW_ITEMS;
+  const loading = !!token && !currentLoad;
+  const loadError = !token
+    ? '로그인 후 복습 노트를 확인해 주세요.'
+    : currentLoad?.error ?? '';
   const missions = useLearningQuery(REVIEW.due, dueMissions);
   // 백엔드 통계에는 개념의 실제 title이 들어 있습니다. 코드값을 이름으로 추측하지 않습니다.
   const concepts = useLearningQuery(STATISTICS_PATHS.concepts, conceptsDecoder);
@@ -82,13 +95,22 @@ function Notebook({ initialFilter }: { initialFilter: ReviewFilter }) {
 
   useFocusEffect(useCallback(() => { setReloadCount(count => count + 1); }, []));
   useEffect(() => {
-    if (!token) { setItems([]); setLoadError('로그인 후 복습 노트를 확인해 주세요.'); setLoading(false); return; }
+    if (!token) return;
     const controller = new AbortController();
-    setLoading(true);
-    setLoadError('');
     loadNotebookItems(token, controller.signal)
-      .then(found => { if (!controller.signal.aborted) { setItems(found); setLoading(false); } })
-      .catch((cause: unknown) => { if (!controller.signal.aborted) { setLoadError(cause instanceof Error ? cause.message : '복습 노트를 불러오지 못했어요.'); setLoading(false); } });
+      .then(found => {
+        if (!controller.signal.aborted) {
+          setLoadResult({ token, reloadCount, items: found, error: '' });
+        }
+      })
+      .catch((cause: unknown) => {
+        if (!controller.signal.aborted) {
+          setLoadResult({
+            token, reloadCount, items: [],
+            error: cause instanceof Error ? cause.message : '복습 노트를 불러오지 못했어요.',
+          });
+        }
+      });
     return () => controller.abort();
   }, [token, reloadCount]);
 

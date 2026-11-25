@@ -28,26 +28,45 @@ function Mission({ initial, reload }: { initial: ReviewAttempt; reload: () => vo
   const { session } = useAuth();
   const token = session?.accessToken;
   const [attempt, setAttempt] = useState(initial);
-  const [items, setItems] = useState<Record<string, ReviewItem> | null>(null);
-  const [loadError, setLoadError] = useState('');
+  const [loadResult, setLoadResult] = useState<{
+    token: string;
+    initial: ReviewAttempt;
+    retry: number;
+    items: Record<string, ReviewItem> | null;
+    error: string;
+  } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
   const [feedbackId, setFeedbackId] = useState<string | null>(null);
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [showConcept, setShowConcept] = useState(false);
   const [retry, setRetry] = useState(0);
+  const currentLoad = loadResult &&
+    loadResult.token === token &&
+    loadResult.initial === initial &&
+    loadResult.retry === retry
+    ? loadResult : null;
+  const items = currentLoad?.items ?? null;
+  const loadError = currentLoad?.error ?? '';
   const action = useBackendAction();
 
   // 배정된 문제의 ID만 응시에 포함되므로 복습 목록에서 실제 문항 본문을 다시 찾습니다.
   useEffect(() => {
     if (!token || initial.status === 'COMPLETED') return;
     const controller = new AbortController();
-    setLoadError('');
-    setItems(null);
     loadAttemptItems(token, initial.answers.map(a => a.questionId), controller.signal)
-      .then(found => { if (!controller.signal.aborted) setItems(found); })
+      .then(found => {
+        if (!controller.signal.aborted) {
+          setLoadResult({ token, initial, retry, items: found, error: '' });
+        }
+      })
       .catch((cause: unknown) => {
-        if (!controller.signal.aborted) setLoadError(cause instanceof Error ? cause.message : '복습 문항을 불러오지 못했어요.');
+        if (!controller.signal.aborted) {
+          setLoadResult({
+            token, initial, retry, items: null,
+            error: cause instanceof Error ? cause.message : '복습 문항을 불러오지 못했어요.',
+          });
+        }
       });
     return () => controller.abort();
   }, [token, initial, retry]);
@@ -183,3 +202,4 @@ const s = StyleSheet.create({
   help: { ...TYPOGRAPHY.small, fontSize: 12, lineHeight: 19, color: COLORS.muted },
   loading: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14 },
 });
+
