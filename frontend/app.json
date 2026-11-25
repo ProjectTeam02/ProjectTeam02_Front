@@ -29,7 +29,9 @@
       "expo-font",
       "expo-splash-screen",
       "expo-web-browser",
-      "./plugins/withAndroidShortObjectPaths"
+      "./plugins/withAndroidShortObjectPaths",
+      "expo-asset",
+      "expo-image"
     ],
     "scheme": "leren",
     "extra": {
