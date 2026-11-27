@@ -1,81 +1,97 @@
-/** 서울 기준 월·일별 기록과 실제 학습 일정 CRUD를 연결합니다. 예시 단계 ID를 서버에 보내지 않습니다. */
-import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+/** Figma 21-01~21-07: 서울 기준 학습 달력과 실제 일정 CRUD. */
+import { useState } from 'react';
+import { Text, StyleSheet } from 'react-native';
 import Screen from '../../components/ui/Screen';
-import { Body, Chip, Heading, Notice, Row } from '../../components/ui/Primitives';
 import { ApiStatus } from '../../components/ui/ApiStatus';
-import { HistoryRecords } from '../../components/ui/HistoryRecords';
 import LerenButton from '../../components/common/LerenButton';
-import LerenInput from '../../components/common/LerenInput';
-import LerenCard from '../../components/common/LerenCard';
+import { CalendarStats, MonthlyCalendar, CalendarEmpty, CalendarDayDetail, CalendarPlanForm, CalendarDeleteDialog, DaySummary, Panel, type Draft } from '../../components/calendar/CalendarViews';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
-import { PATHS, monthDecoder, dayDecoder, historyDecoder, planDecoder, deletedDecoder, type Plan } from '../../services/backend';
-import { LEARNING_PATHS, stagesDecoder, topicsDecoder } from '../../services/learningApi';
-import { COLORS } from '../../constants/theme';
-const two = (v: number) => String(v).padStart(2, '0');
-const seoulToday = () => { const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()); const get = (key: string) => parts.find(v => v.type === key)?.value; return `${get('year')}-${get('month')}-${get('day')}`; };
-interface Target { topicId: string; stageId: string | null; conceptId: string | null; label: string }
-interface Draft { id: string | null; date: string; goal: string; planType: 'NEW_LEARNING' | 'REVIEW'; target: Target | null }
-export default function CalendarScreen() {
-  const [date, setDate] = useState(seoulToday);
-  const [month, setMonth] = useState(() => date.slice(0, 7));
-  const [draft, setDraft] = useState<Draft | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-  const [notice, setNotice] = useState('');
-  const [validation, setValidation] = useState('');
-  const monthly = useBackend(`${PATHS.calendar}?month=${month}`, monthDecoder);
-  const daily = useBackend(`${PATHS.calendar}/days/${date}`, dayDecoder);
-  const history = useBackend(`${PATHS.history}?page=1&pageSize=100`, historyDecoder);
-  const [chosenTopic, setChosenTopic] = useState<string | null>(null);
-  const catalog = useBackend(draft ? LEARNING_PATHS.topics : null, topicsDecoder);
-  const topic = chosenTopic ?? draft?.target?.topicId ?? catalog.data?.items[0]?.topicId;
-  const stageList = useBackend(draft && topic ? LEARNING_PATHS.stages(topic) : null, stagesDecoder);
-  const action = useBackendAction();
-  const [year, monthNumber] = month.split('-').map(Number);
-  const cells = useMemo(() => { const first = (new Date(year, monthNumber - 1, 1).getDay() + 6) % 7; const length = new Date(year, monthNumber, 0).getDate(); return Array.from({ length: Math.ceil((first + length) / 7) * 7 }, (_, i) => i >= first && i < first + length ? i - first + 1 : null); }, [year, monthNumber]);
+import { useLearningQuery } from '../../hooks/useLearningQuery';
+import { PATHS, monthDecoder, planDecoder, deletedDecoder } from '../../services/backend';
+import { calendarDayDecoder, type CalendarPlan } from '../../services/calendarApi';
+import { LEARNING_PATHS, topicsDecoder, stagesDecoder } from '../../services/learningApi';
+import { selectCalendarStage } from '../../services/calendarTargets';
+import { dateLabel, goalValid, previewDates, seoulToday, validDate } from '../../services/calendarUtils';
+import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 
-  const targets: Target[] = [];
-  const append = (t: Target) => { if (!targets.some(v => v.stageId === t.stageId && v.conceptId === t.conceptId)) targets.push(t); };
-  for (const p of daily.data?.schedules ?? []) if (p.topic && (p.stageId || p.conceptId)) append({ topicId: p.topic.topicId, stageId: p.stageId, conceptId: p.conceptId, label: p.topic.title });
-  for (const r of history.data?.items ?? []) if (r.topic && r.stage) append({ topicId: r.topic.topicId, stageId: r.stage.stageId, conceptId: null, label: r.stage.title });
-  const refresh = () => { monthly.reload(); daily.reload(); history.reload(); };
-  const move = (delta: number) => { const d = new Date(year, monthNumber - 1 + delta, 1); const m = `${d.getFullYear()}-${two(d.getMonth() + 1)}`; setMonth(m); setDate(`${m}-01`); setNotice(''); setConfirmDelete(null); };
-  const edit = (p?: Plan) => { setChosenTopic(null); setNotice(''); setValidation(''); setDraft({ id: p?.planId ?? null, date: p?.scheduledDate ?? date, goal: p?.goal ?? '', planType: p?.planType === 'REVIEW' ? 'REVIEW' : 'NEW_LEARNING', target: p?.topic ? { topicId: p.topic.topicId, stageId: p.stageId, conceptId: p.conceptId, label: p.topic.title } : targets[0] ?? null }); };
-  const save = async () => {
-    if (!draft || action.busy) return;
-    const goal = draft.goal.trim();
-    if (!goal || [...goal].length > 30 || !/^\d{4}-\d{2}-\d{2}$/.test(draft.date)) { setValidation('목표는 1~30자, 날짜는 YYYY-MM-DD로 입력해 주세요.'); return; }
-    if (!draft.target) { setValidation('실제 학습 대상을 먼저 선택해 주세요.'); return; }
-    const result = await action.run(draft.id ? `${PATHS.plans}/${draft.id}` : PATHS.plans, planDecoder, draft.id ? 'PATCH' : 'POST', { scheduledDate: draft.date, goal, planType: draft.planType, topicId: draft.target.topicId, stageId: draft.target.stageId, conceptId: draft.target.conceptId });
-    if (result) { setDate(result.scheduledDate); setMonth(result.scheduledDate.slice(0, 7)); setDraft(null); refresh(); setNotice('학습 일정을 저장했어요.'); }
+export default function CalendarScreen() {
+  const [date,setDate]=useState(seoulToday);
+  const [month,setMonth]=useState(()=>date.slice(0,7));
+  const [detail,setDetail]=useState(false);
+  const [draft,setDraft]=useState<Draft|null>(null);
+  const [confirmDelete,setConfirmDelete]=useState(false);
+  const [notice,setNotice]=useState<{title:string;description?:string}|null>(null);
+  const [validation,setValidation]=useState('');
+  const [attempted,setAttempted]=useState(false);
+  const [originalDate,setOriginalDate]=useState<string|null>(null);
+  const monthly=useLearningQuery(`${PATHS.calendar}?month=${month}`,monthDecoder);
+  const daily=useLearningQuery(`${PATHS.calendar}/days/${date}`,calendarDayDecoder);
+  const [firstPreview,secondPreview]=previewDates(monthly.data?.days??[],date,seoulToday());
+  const preview1=useLearningQuery(firstPreview?`${PATHS.calendar}/days/${firstPreview}`:null,calendarDayDecoder);
+  const preview2=useLearningQuery(secondPreview?`${PATHS.calendar}/days/${secondPreview}`:null,calendarDayDecoder);
+  const topics=useBackend(draft?LEARNING_PATHS.topics:null,topicsDecoder);
+  const stages=useBackend(draft?.topicId?LEARNING_PATHS.stages(draft.topicId):null,stagesDecoder);
+  const action=useBackendAction();
+  const refresh=()=>{monthly.reload();daily.reload();preview1.reload();preview2.reload();};
+  const clearErrors=()=>{setValidation('');setAttempted(false);};
+  const changeDate=(d:string)=>{setDate(d);setMonth(d.slice(0,7));setNotice(null);clearErrors();};
+  const openDetail=(d:string)=>{changeDate(d);setDetail(true);};
+  const edit=(p?:CalendarPlan)=>{
+    setNotice(null);clearErrors();setConfirmDelete(false);
+    const target=p?.topic&&(p.stageId||p.conceptId)?{topicId:p.topic.topicId,stageId:p.stageId,conceptId:p.conceptId,label:[p.topic.title,p.stage?.title??p.concept?.title].filter(Boolean).join(' · ')}:null;
+    setDraft({id:p?.planId??null,date:p?.scheduledDate??date,goal:p?.goal??'',planType:p?.planType==='REVIEW'?'REVIEW':'NEW_LEARNING',topicId:target?.topicId??null,target});
   };
-  const remove = async (id: string) => { setNotice(''); const result = await action.run(`${PATHS.plans}/${id}`, deletedDecoder, 'DELETE'); if (result) { refresh(); setConfirmDelete(null); setNotice('학습 일정을 삭제했어요.'); } };
-  if (draft) return <Screen title={draft.id ? '학습 일정 수정' : '학습 일정 추가'} back tabs onBack={() => { if (!action.busy) setDraft(null); }}>
-    <LerenInput label="학습 목표" value={draft.goal} onChangeText={goal => setDraft({ ...draft, goal })} hint="1~30자" />
-    <LerenInput label="날짜" value={draft.date} onChangeText={value => setDraft({ ...draft, date: value })} placeholder="YYYY-MM-DD" />
-    <Row><Chip label="새 학습" active={draft.planType === 'NEW_LEARNING'} onPress={() => setDraft({ ...draft, planType: 'NEW_LEARNING' })} /><Chip label="복습" active={draft.planType === 'REVIEW'} onPress={() => setDraft({ ...draft, planType: 'REVIEW' })} /></Row>
-    <Heading>학습할 내용</Heading>{draft.target && <Body>선택: {draft.target.label}</Body>}<Row style={{ flexWrap: 'wrap' }}>{catalog.data?.items.map(t => <Chip key={t.topicId} label={t.title} active={topic === t.topicId} onPress={() => setChosenTopic(t.topicId)} />)}</Row>
-    <ApiStatus resource={catalog} label="학습 주제" />
-    {!!topic && <ApiStatus resource={stageList} label="학습 단계" />}
-    {stageList.data?.items.map(s => <Chip key={s.stageId} label={s.title} active={draft.target?.stageId === s.stageId} onPress={() => setDraft({ ...draft, target: { topicId: s.topicId, stageId: s.stageId, conceptId: null, label: s.title } })} />)}
-    {targets.length > 0 && <Body muted>최근 학습 대상</Body>}{targets.map((t, i) => <LerenButton key={i} title={t.label} variant="secondary" onPress={() => setDraft({ ...draft, target: t })} />)}
-    {!draft.target && <Notice>학습 주제를 고른 뒤 일정을 잡을 단계를 선택해 주세요.</Notice>}
-    {!!validation && <Notice tone="error">{validation}</Notice>}{!!action.error && <Notice tone="error">저장 실패: {action.error}</Notice>}
-    <LerenButton title="학습 일정 저장" loading={action.busy} disabled={action.busy || !draft.target} onPress={save} /><LerenButton title="취소" variant="secondary" disabled={action.busy} onPress={() => setDraft(null)} />
-    <Body muted>백엔드는 일정 시간을 받지 않습니다. 휴대폰 알림 발송은 별도 기능입니다.</Body>
+  const updateDraft=(d:Draft)=>{if(!action.busy){setDraft(d);clearErrors();}};
+  const chooseTopic=(id:string)=>{if(draft&&!action.busy&&draft.topicId!==id)updateDraft({...draft,topicId:id,target:null});};
+  const chooseStage=(id:string)=>{
+    if(!draft?.topicId||action.busy)return;
+    const target=selectCalendarStage(draft.topicId,id,stages.data);
+    if(target)updateDraft({...draft,target:{...target,label:`${stages.data!.topic.title} · ${target.label}`}});
+  };
+  const cancel=()=>{if(!action.busy){setDraft(null);setConfirmDelete(false);clearErrors();}};
+  const save=async()=>{
+    if(!draft||action.busy)return;
+    clearErrors();
+    if(!validDate(draft.date)){setValidation('유효한 학습 날짜를 선택해 주세요.');return;}
+    if(!goalValid(draft.goal)){setValidation('나의 목표는 1~30자로 입력해 주세요.');return;}
+    const target=draft.target;
+    if(!target||target.topicId!==draft.topicId||(!target.stageId&&!target.conceptId)){setValidation('학습 주제와 단계를 선택해 주세요.');return;}
+    setAttempted(true);
+    const result=await action.run(draft.id?`${PATHS.plans}/${encodeURIComponent(draft.id)}`:PATHS.plans,planDecoder,draft.id?'PATCH':'POST',{scheduledDate:draft.date,goal:draft.goal.trim(),planType:draft.planType,topicId:target.topicId,stageId:target.stageId,conceptId:target.conceptId});
+    if(result){changeDate(result.scheduledDate);setDraft(null);setDetail(false);refresh();setNotice({title:`${dateLabel(result.scheduledDate)} 일정을 저장했어요.`});}
+  };
+  const remove=async()=>{
+    if(!draft?.id||action.busy)return;
+    setAttempted(true);setValidation('');
+    const result=await action.run(`${PATHS.plans}/${encodeURIComponent(draft.id)}`,deletedDecoder,'DELETE');
+    if(result){const deletedDate=draft.date;/* 수정 중 날짜를 바꿔도 삭제 대상은 기존 일정 날짜입니다. */
+      changeDate(originalDate??deletedDate);setDraft(null);setConfirmDelete(false);setDetail(false);refresh();setNotice({title:`${dateLabel(originalDate??deletedDate)} 일정을 삭제했어요.`,description:'완료한 학습 기록은 그대로 남아 있어요.'});}
+  };
+  // 편집 도중 날짜를 바꾸더라도 삭제 안내는 저장된 원래 날짜를 사용합니다.
+  const openForm=(p?:CalendarPlan)=>{setOriginalDate(p?.scheduledDate??null);edit(p);};
+  const error=validation||(attempted?action.error:'');
+  if(draft)return <Screen title={draft.id?'학습 일정 수정':'학습 일정 추가'} tabs onBack={cancel}>
+    <CalendarPlanForm key={draft.id??'new'} draft={draft} topics={topics} stages={stages} busy={action.busy} error={confirmDelete?'':error} onChange={updateDraft} onTopic={chooseTopic} onStage={chooseStage} onSave={()=>void save()} onCancel={cancel} onDelete={()=>{clearErrors();setConfirmDelete(true);}}/>
+    <CalendarDeleteDialog visible={confirmDelete} busy={action.busy} error={error} onConfirm={()=>void remove()} onCancel={()=>{if(!action.busy){setConfirmDelete(false);clearErrors();}}}/>
   </Screen>;
-  return <Screen title="학습 달력" back tabs>
-    <ApiStatus resource={monthly} label="월별 달력" empty={monthly.data?.days.every(d => d.completedCount === 0 && d.scheduledCount === 0)} />
-    {monthly.data && <Row><LerenCard title={monthly.data.completedDayCount + '일'} description="이번 달 학습" style={{ flex: 1 }} variant="info" /><LerenCard title={monthly.data.streakDays + '일'} description="연속 학습" style={{ flex: 1 }} /></Row>}
-    <Heading>{year}년 {monthNumber}월</Heading><Row><LerenButton title="이전 달" style={{ flex: 1, width: undefined }} variant="secondary" onPress={() => move(-1)} /><LerenButton title="다음 달" style={{ flex: 1, width: undefined }} variant="secondary" onPress={() => move(1)} /></Row>
-    <View style={s.grid}>{['월','화','수','목','금','토','일'].map(v => <Text key={v} style={s.day}>{v}</Text>)}{cells.map((d, i) => { const key = `${month}-${two(d ?? 1)}`; const summary = monthly.data?.days.find(v => v.date === key); return <View key={i} style={s.cell}>{d !== null && <Pressable accessibilityRole="button" accessibilityLabel={`${monthNumber}월 ${d}일`} accessibilityState={{ selected: date === key }} onPress={() => { setDate(key); setNotice(''); setConfirmDelete(null); }} style={[s.date, date === key && s.selected]}><Body>{d}</Body><Text>{summary?.hasCompletedLearning ? '●' : summary?.hasScheduledLearning ? '○' : ' '}</Text></Pressable>}</View>; })}</View>
-    <Body muted>● 학습 완료 · ○ 예정 · 서울 기준 날짜</Body><Heading>{date}</Heading>
-    <ApiStatus resource={daily} label="선택한 날짜" empty={daily.data?.learningRecords.length === 0 && daily.data?.schedules.length === 0} />
-    {!!notice && <Notice tone="success">{notice}</Notice>}{!!action.error && <Notice tone="error">일정 변경 실패: {action.error}</Notice>}
-    <HistoryRecords key={date} records={daily.data?.learningRecords ?? []} />
-    {daily.data?.schedules.map(p => <LerenCard key={p.planId} title={p.goal} description={`${p.topic?.title ?? '학습 주제 없음'} · ${p.planType === 'REVIEW' ? '복습' : '새 학습'}`}><LerenButton title="일정 수정" variant="secondary" disabled={action.busy} onPress={() => edit(p)} />{confirmDelete === p.planId ? <><Notice>이 일정을 서버에서 삭제할까요?</Notice><LerenButton title="삭제 확인" loading={action.busy} disabled={action.busy} onPress={() => remove(p.planId)} /><LerenButton title="삭제 취소" variant="secondary" onPress={() => setConfirmDelete(null)} /></> : <LerenButton title="일정 삭제" variant="secondary" onPress={() => setConfirmDelete(p.planId)} />}</LerenCard>)}
-    <LerenButton title="학습 일정 추가" onPress={() => edit()} />
-    {history.status === 'error' && <ApiStatus resource={history} label="최근 학습 기록" />}
+  if(detail)return <Screen title={`${dateLabel(date)}의 학습`} tabs onBack={()=>setDetail(false)}>
+    <ApiStatus resource={daily} label="날짜별 학습 기록"/>
+    {daily.data?<CalendarDayDetail day={daily.data} onBack={()=>setDetail(false)}/>:<LerenButton title="달력으로 돌아가기" variant="secondary" onPress={()=>setDetail(false)}/>}
+  </Screen>;
+  const empty=monthly.status==='success'&&!!monthly.data&&monthly.data.days.every(d=>d.completedCount===0&&d.scheduledCount===0);
+  return <Screen title="학습 달력" tabs>
+    <ApiStatus resource={monthly} label="월별 달력"/>
+    {monthly.data&&!empty&&<CalendarStats left={`${monthly.data.completedDayCount}일`} leftLabel="이번 달 학습" right={`${monthly.data.streakDays}일`} rightLabel="연속 학습"/>}
+    <MonthlyCalendar month={month} date={date} days={monthly.data?.days} onMonth={m=>{if(m!==month)changeDate(`${m}-01`);}} onDate={changeDate}/>
+    {notice&&<Panel><Text style={s.title}>{notice.title}</Text>{notice.description&&<Text style={s.body}>{notice.description}</Text>}</Panel>}
+    <ApiStatus resource={daily} label="날짜별 기록"/>
+    {empty&&daily.status==='success'&&daily.data&&daily.data.learningRecords.length===0&&daily.data.schedules.length===0?<CalendarEmpty onAdd={()=>openForm()}/>:<>
+      {daily.data&&<DaySummary day={daily.data} onDetail={()=>openDetail(date)} onEdit={openForm}/>}
+      {daily.data&&daily.data.learningRecords.length===0&&daily.data.schedules.length===0&&<Text style={s.body}>{dateLabel(date)}에는 학습 기록이나 예정 일정이 없어요.</Text>}
+      {firstPreview&&<><ApiStatus resource={preview1} label={`${dateLabel(firstPreview)} 기록`}/>{preview1.data&&<DaySummary day={preview1.data} onDetail={()=>openDetail(firstPreview)} onEdit={openForm}/>}</>}
+      {secondPreview&&<><ApiStatus resource={preview2} label={`${dateLabel(secondPreview)} 기록`}/>{preview2.data&&<DaySummary day={preview2.data} onDetail={()=>openDetail(secondPreview)} onEdit={openForm}/>}</>}
+      <LerenButton title="학습 일정 추가" onPress={()=>openForm()}/>
+    </>}
   </Screen>;
 }
-const s = StyleSheet.create({ grid: { flexDirection: 'row', flexWrap: 'wrap' }, day: { width: `${100 / 7}%`, textAlign: 'center', padding: 4 }, cell: { width: `${100 / 7}%`, minHeight: 54 }, date: { alignItems: 'center', paddingVertical: 5, borderRadius: 8 }, selected: { backgroundColor: COLORS.soft } });
+const s=StyleSheet.create({title:{...TYPOGRAPHY.label,color:COLORS.ink},body:{...TYPOGRAPHY.small,color:COLORS.muted}});
