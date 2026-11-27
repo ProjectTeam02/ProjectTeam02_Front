@@ -1,7 +1,6 @@
-
-/** 피그마 26-04: 학습 알림 설정 조회 및 서버 저장 */
+/** 피그마 26-04: 학습 알림 설정과 실제 OS 알림 권한·기기 등록을 분리해 표시합니다. */
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
 import Screen from '../../components/ui/Screen';
 import { Notice } from '../../components/ui/Primitives';
 import LerenButton from '../../components/common/LerenButton';
@@ -9,6 +8,7 @@ import LerenInput from '../../components/common/LerenInput';
 import LerenIcon from '../../components/common/LerenIcon';
 import { COLORS, TYPOGRAPHY } from '../../constants/theme';
 import { useBackend, useBackendAction } from '../../hooks/useBackend';
+import { usePushNotifications } from '../../context/PushNotificationContext';
 import { object, BackendError } from '../../services/backend';
 
 const PATH = '/api/v1/users/me/notification-settings';
@@ -38,14 +38,28 @@ const toServerTime = (value: string): string | null => {
 export default function NotificationSettingsScreen() {
   const settings = useBackend(PATH, settingDecoder);
   const action = useBackendAction();
+  const push = usePushNotifications();
   const [editedEnabled, setEnabled] = useState<boolean | null>(null);
   const [editedTime, setTime] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [settingsError, setSettingsError] = useState('');
   const initialized = settings.data !== null;
   const enabled = editedEnabled ?? settings.data?.reminderEnabled ?? null;
   const time = editedTime ?? (settings.data?.reminderTime ? toDisplayTime(settings.data.reminderTime) : '오후 8:00');
   const serverTime = toServerTime(time);
+
+  const handlePermission = async () => {
+    if (!push.supported || push.busy) return;
+    setSettingsError('');
+    // 이미 허용되었거나 시스템이 재요청을 허용하지 않으면 OS 설정으로 이동합니다.
+    if (push.permissionGranted === true || (push.permissionGranted === false && !push.canAskAgain)) {
+      try { await Linking.openSettings(); }
+      catch { setSettingsError('기기 설정을 열지 못했어요. 시스템 설정에서 직접 확인해 주세요.'); }
+      return;
+    }
+    await push.requestPermission();
+  };
 
   const save = async () => {
     setSubmitted(true);
@@ -58,7 +72,15 @@ export default function NotificationSettingsScreen() {
     setTime(result.reminderTime ? toDisplayTime(result.reminderTime) : time);
     setSaved(true);
     settings.reload();
+    // 시간 저장은 계정 설정이며 기기 등록 성공과는 별개입니다.
+    if (result.reminderEnabled && push.supported && !push.busy) void push.refresh();
   };
+
+  const permissionLabel = !push.supported ? '실제 기기의 Development Build에서 사용할 수 있어요'
+    : push.busy ? '알림 상태 확인 중'
+    : push.permissionGranted === true ? '알림 허용됨 · 기기 설정 열기'
+    : push.permissionGranted === false ? push.canAskAgain ? '알림 권한 허용하기' : '기기 설정에서 허용하기'
+    : '알림 권한 확인하기';
 
   return <Screen title="학습 알림" back tabs>
     {settings.status === 'loading' && <Notice>학습 알림 설정을 불러오는 중이에요.</Notice>}
@@ -90,23 +112,32 @@ export default function NotificationSettingsScreen() {
         placeholder="오후 8:00" editable={enabled === true && !action.busy}
         hint="학습할 시간을 정해 보세요"
         error={(editedTime !== null || submitted) && enabled === true && !serverTime ? '알림 시간을 올바르게 입력해 주세요.' : ''} />
-      {enabled === false && <View style={{ backgroundColor: '#FFF4E3', borderRadius: 12, padding: 14, gap: 5 }}>
+      {push.supported && push.permissionGranted === false && <View style={{ backgroundColor: '#FFF4E3', borderRadius: 12, padding: 14, gap: 5 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
           <LerenIcon name="BellOff" size={18} color="#94621D" />
           <Text style={{ ...TYPOGRAPHY.label, color: '#94621D' }}>알림 권한이 꺼져 있어요</Text>
         </View>
-        <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>기기 설정에서 LEREN 알림을 허용하면 학습 시간을 알려 드릴 수 있어요.</Text>
+        <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>기기에서 LEREN 알림을 허용하면 학습 시간을 알려 드릴 수 있어요.</Text>
       </View>}
-      <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, gap: 10 }}>
+      <Pressable accessibilityRole="button" disabled={!push.supported || push.busy} onPress={() => { void handlePermission(); }}
+        style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: COLORS.line, borderRadius: 12, padding: 12, gap: 10 }}>
         <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: COLORS.soft, alignItems: 'center', justifyContent: 'center' }}>
           <LerenIcon name="Settings" size={18} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={{ ...TYPOGRAPHY.label, color: COLORS.ink }}>알림 권한</Text>
-          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>기기 설정에서 허용하기</Text>
+          <Text style={{ ...TYPOGRAPHY.small, color: COLORS.muted }}>{permissionLabel}</Text>
         </View>
-      </View>
-      <Notice>현재는 서버에 알림 설정만 저장돼요. 실제 기기 알림 권한과 푸시 발송은 아직 연결되지 않았어요.</Notice>
+      </Pressable>
+      {!push.supported && <Notice>현재 환경에서는 서버에 학습 알림 설정만 저장할 수 있어요. 실제 푸시는 기기에 설치한 Development Build에서 테스트해 주세요.</Notice>}
+      {push.supported && push.busy && <Notice>기기 알림 연결을 확인하고 있어요.</Notice>}
+      {push.supported && !push.busy && push.registered && !push.error && <Notice tone="success">이 기기의 푸시 알림 등록이 완료됐어요.</Notice>}
+      {push.supported && !push.busy && push.permissionGranted === true && !push.registered && !push.error && <Notice>알림 권한은 허용됐지만 서버 기기 등록은 아직 완료되지 않았어요.</Notice>}
+      {!!settingsError && <Notice tone="error">{settingsError}</Notice>}
+      {!!push.error && <>
+        <Notice tone="error">{push.error}</Notice>
+        <LerenButton title="기기 연결 다시 시도" variant="secondary" disabled={push.busy} onPress={() => { void push.refresh(); }} />
+      </>}
       {!!action.error && <Notice tone="error">{action.error}</Notice>}
       {saved && <Notice tone="success">학습 알림 설정을 저장했어요.</Notice>}
       <LerenButton title="설정 저장" loading={action.busy} disabled={action.busy || enabled === null || (enabled && !serverTime)} onPress={() => { void save(); }} />

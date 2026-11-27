@@ -6,6 +6,7 @@ import { createContext, useContext, useRef, useState, useCallback, type ReactNod
 import { Platform } from 'react-native';
 import { login, logout, type LoginResult } from '../services/auth';
 import { clearKakaoWebFlow, getKakaoWebFlow } from '../services/kakao';
+import { pauseDeviceSync, resumeDeviceSync } from '../services/notificationApi';
 
 interface AuthState {
   session: LoginResult | null;
@@ -74,11 +75,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session || pending.current) return;
     pending.current = true;
     try {
+      // 기존 백엔드 로그아웃은 사용자 기기도 함께 비활성화합니다.
+      // 먼저 신규 PUT을 막고 이미 전송된 요청만 정리합니다.
+      await pauseDeviceSync(session.accessToken);
       await logout(session.accessToken);
       kakaoCompletion.current = null;
       setReturningName(session.user.nickname);
       setSession(null);
       setSessionRevision((value) => value + 1);
+    } catch (error) {
+      // 로그아웃 실패 시 기존 로그인 상태를 유지하고 이후 재동기화를 허용합니다.
+      resumeDeviceSync(session.accessToken);
+      throw error;
     } finally { pending.current = false; }
   };
 
