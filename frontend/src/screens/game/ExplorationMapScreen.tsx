@@ -35,7 +35,14 @@ import {
   type Topic,
 } from '../../services/learningApi';
 
-type RegionStatus = 'loading' | 'locked' | 'available' | 'complete' | 'unavailable' | 'error';
+type RegionStatus =
+  | 'loading'
+  | 'locked'
+  | 'available'
+  | 'in_progress'
+  | 'complete'
+  | 'unavailable'
+  | 'error';
 type DialogInfo = { title: string; introduction: string; detail: string };
 
 function openTopic(topic: Topic) {
@@ -47,7 +54,7 @@ function RegionHotspot({
   number,
   topic,
   topicListStatus,
-  prerequisitesCompleted,
+  reloadTopics,
   scale,
   onStatusChange,
   onDialog,
@@ -55,41 +62,70 @@ function RegionHotspot({
   number: RegionNumber;
   topic?: Topic;
   topicListStatus: 'idle' | 'loading' | 'success' | 'error';
-  prerequisitesCompleted: boolean;
+  reloadTopics: () => void;
   scale: number;
   onStatusChange: (number: RegionNumber, status: RegionStatus) => void;
   onDialog: (info: DialogInfo) => void;
 }) {
   const path = topic ? LEARNING_PATHS.stages(topic.topicId) : null;
   const stages = useLearningQuery(path, stagesDecoder);
+  
   const steps = stages.data?.items ?? [];
-  const passed = steps.filter(stage => stage.progressStatus === 'PASSED').length;
 
-  // API가 일부 단계만 공개해도 지역 전체가 완료됐다고 판정하지 않음.
-  // Figma의 한 지역은 일반 학습 4개 + 보스 1개, 총 5단계.
-  const allFivePassed = steps.length === 5 && passed === 5;
+  // 배열 순서가 아닌 stageNo 기준으로 첫 Stage 식별
+  const firstStage = [...steps].sort(
+    (a, b) => a.stageNo - b.stageNo
+  )[0];
 
-  const apiStatus: RegionStatus = !topic
-    ? topicListStatus === 'loading' || topicListStatus === 'idle' ? 'loading'
-      : topicListStatus === 'error' ? 'error' : 'unavailable'
-    : stages.status === 'loading' || stages.status === 'idle' ? 'loading'
-    : stages.status === 'error' ? 'error'
-    : steps.length === 0 ? 'unavailable'
-    : allFivePassed ? 'complete'
-    : steps.some(stage => stage.isUnlocked && stage.progressStatus !== 'PASSED') ? 'available' : 'locked';
+  // Boss Stage 식별
+  const bossStage = steps.find(
+    stage => stage.stageType === 'BOSS'
+  );
 
-  // 백엔드에 선행 주제 설정이 아직 반영되지 않았더라도
-  // Figma 트리의 선행 지역을 완료하기 전에는 다음 섬을 열지 않음.
-  const status: RegionStatus = apiStatus === 'available' && !prerequisitesCompleted
-    ? 'locked'
-    : apiStatus;
+  // 기존 사용자 학습 진행 상태 확인
+  const hasProgress = steps.some(
+    stage =>
+      stage.progressStatus === 'IN_PROGRESS' ||
+      stage.progressStatus === 'PASSED'
+  );
+
+  // 지역 상태는 서버 응답을 기준으로 결정
+  const status: RegionStatus =
+    topicListStatus === 'loading' ||
+    topicListStatus === 'idle'
+      ? 'loading'
+      : topicListStatus === 'error'
+        ? 'error'
+        : !topic
+          ? 'unavailable'
+          : stages.status === 'loading' ||
+              stages.status === 'idle'
+            ? 'loading'
+            : stages.status === 'error'
+              ? 'error'
+              : !firstStage || !bossStage
+                ? 'unavailable'
+                : bossStage.progressStatus === 'PASSED'
+                  ? 'complete'
+                  : !firstStage.isUnlocked
+                    ? 'locked'
+                    : hasProgress
+                      ? 'in_progress'
+                      : 'available';
+  
 
   useEffect(() => {
     onStatusChange(number, status);
   }, [number, status, onStatusChange]);
 
   const area = MAP_LAYOUT[number];
-  const badge = status === 'complete' ? 'complete' : status === 'available' ? 'available' : 'locked';
+  const badge =
+  status === 'complete'
+    ? 'complete'
+    : status === 'available' ||
+        status === 'in_progress'
+      ? 'available'
+      : 'locked';
   // 확정한 지도에는 배지가 없으므로 1~9번 모두 상태 이미지를 별도로 그립니다.
   const badgeWidth = badge === 'available' ? 88 : badge === 'complete' ? 65 : 62;
   const badgeHeight = 25;
@@ -103,7 +139,11 @@ function RegionHotspot({
     const introduction = `이 섬에서는 ‘${MAP_SUBJECTS[number]}’ 주제를 배워요.`;
 
     if (status === 'error') {
-      if (topic) stages.reload();
+      if (topicListStatus === 'error') {
+        reloadTopics();
+      } else if (topic) {
+        stages.reload();
+      }
       onDialog({
         title,
         introduction,
@@ -140,7 +180,7 @@ function RegionHotspot({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${number}번 ${MAP_TITLES[number]}, ${status === 'complete' ? '완료' : status === 'available' ? '도전 가능' : status === 'locked' ? '잠금' : '확인 중'}`}
+      accessibilityLabel={`${number}번 ${MAP_TITLES[number]}, ${status === 'complete' ? '완료' : status === 'available' ? '도전 가능' : status === 'in_progress' ? '진행 중' : status === 'locked' ? '잠금' : status === 'error' ? '재시도' : status === 'unavailable' ? '준비 중' : '확인 중'}`}
       onPress={onPress}
       style={[
         styles.hotspot,
@@ -165,6 +205,30 @@ function RegionHotspot({
         ]}>
           <Text style={[styles.pendingText, { fontSize: 10 * scale }]}>
             {status === 'loading' ? '조회 중' : status === 'error' ? '재시도' : '준비 중'}
+          
+          </Text>
+        </View>
+      ) : status === 'in_progress' ? (
+        <View
+          style={[
+            styles.pendingBadge,
+            {
+              top: badgeTop,
+              left: (MAP_BADGES[number].cx - area.x - 39) * scale,
+              width: 78 * scale,
+              height: badgeHeight * scale,
+              borderRadius: 12 * scale,
+              backgroundColor: '#2D4F95',
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.pendingText,
+              { fontSize: 10 * scale },
+            ]}
+          >
+            진행 중
           </Text>
         </View>
       ) : (
@@ -182,6 +246,7 @@ function RegionHotspot({
       )}
     </Pressable>
   );
+  
 }
 
 export default function ExplorationMapScreen() {
@@ -203,9 +268,10 @@ export default function ExplorationMapScreen() {
   }, []);
 
   // 완료/잠금 표시만 서버 진행도에서 계산한다. 별도 시작 버튼은 사용하지 않는다.
+  const inProgressNo = REGION_NUMBERS.find(n => statuses[n] === 'in_progress');
   const availableNo = REGION_NUMBERS.find(n => statuses[n] === 'available');
   const completeNo = REGION_NUMBERS.find(n => statuses[n] === 'complete');
-  const currentRegionNo = availableNo ?? (completeNo ?? 1);
+  const currentRegionNo = inProgressNo ?? availableNo ?? completeNo ?? 1;
 
   const onViewportLayout = (event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -276,9 +342,7 @@ export default function ExplorationMapScreen() {
                 number={number}
                 topic={topicByNumber.get(number)}
                 topicListStatus={topics.status}
-                prerequisitesCompleted={MAP_PREREQUISITES[number].every(
-                  prerequisite => statuses[prerequisite] === 'complete'
-                )}
+                reloadTopics={topics.reload}
                 scale={scale}
                 onStatusChange={onStatusChange}
                 onDialog={setDialog}
