@@ -32,6 +32,7 @@
       "./plugins/withAndroidShortObjectPaths",
       "expo-asset",
       "expo-image",
+      "expo-notifications",
       "expo-secure-store"
     ],
     "scheme": "leren",
