@@ -31,7 +31,8 @@
       "expo-web-browser",
       "./plugins/withAndroidShortObjectPaths",
       "expo-asset",
-      "expo-image"
+      "expo-image",
+      "expo-secure-store"
     ],
     "scheme": "leren",
     "extra": {
