@@ -1,10 +1,10 @@
 
 /** LEREN 공통 아이콘 */
 import { createElement } from 'react';
-import { LockKeyhole, Mail, Bell, BellOff, Clock, UserRound, Coins, Shirt, Settings, CalendarDays, ChartNoAxesColumn, TrendingUp, BookOpen, ChevronRight, Pencil, CheckCircle2, Flag, History, Send, MessageCircle, RefreshCw, House, Map, CheckCheck, Sparkles, Eye, EyeOff, type LucideProps } from 'lucide-react-native';
+import { LockKeyhole, Mail, Bell, BellOff, Clock, UserRound, Coins, Shirt, Settings, CalendarDays, ChartNoAxesColumn, TrendingUp, BookOpen, ChevronRight, Pencil, CheckCircle2, Flag, History, Send, MessageCircle, RefreshCw, House, Map, CheckCheck, Sparkles, Eye, EyeOff, CircleAlert, type LucideProps } from 'lucide-react-native';
 import { COLORS } from '../../constants/theme';
 
-const icons = { LockKeyhole, Mail, Bell, BellOff, Clock, UserRound, Coins, Shirt, Settings, CalendarDays, ChartNoAxesColumn, TrendingUp, BookOpen, ChevronRight, Pencil, CheckCircle2, Flag, History, Send, MessageCircle, RefreshCw, House, Map, CheckCheck, Sparkles, Eye, EyeOff };
+const icons = { LockKeyhole, Mail, Bell, BellOff, Clock, UserRound, Coins, Shirt, Settings, CalendarDays, ChartNoAxesColumn, TrendingUp, BookOpen, ChevronRight, Pencil, CheckCircle2, Flag, History, Send, MessageCircle, RefreshCw, House, Map, CheckCheck, Sparkles, Eye, EyeOff, CircleAlert };
 
 type IconName = keyof typeof icons;
 

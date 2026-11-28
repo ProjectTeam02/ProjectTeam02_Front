@@ -13,6 +13,7 @@ interface AuthState {
   sessionRevision: number;
   returningName?: string;
   signIn: (email: string, password: string) => Promise<void>;
+  completeSignup: (result: LoginResult) => void;
   startKakaoSignIn: () => Promise<void>;
   finishKakaoSignIn: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -26,6 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pending = useRef(false);
   const kakaoCompletion = useRef<Promise<void> | null>(null);
 
+  // 로그인이나 가입으로 받은 세션은 같은 초기화 경로를 거쳐 메모리에만 반영합니다.
+  const startSession = useCallback((result: LoginResult) => {
+    setSession(result);
+    setSessionRevision(value => value + 1);
+  }, []);
+
+  const completeSignup = (result: LoginResult) => {
+    if (pending.current) throw new Error('인증 요청을 처리하고 있어요. 잠시 후 다시 시도해 주세요.');
+    kakaoCompletion.current = null;
+    startSession(result);
+  };
+
   /** 웹은 같은 탭으로 이동하고, 모바일은 인증 창의 복귀 결과를 기다려 세션을 반영합니다. */
   const startKakaoSignIn = async () => {
     if (pending.current) throw new Error('인증 요청을 처리하고 있어요. 잠시 후 다시 시도해 주세요.');
@@ -37,8 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       kakaoCompletion.current = (async () => {
         const { signInWithKakaoNative } = await import('../services/kakaoNative');
         const result = await signInWithKakaoNative();
-        setSession(result);
-        setSessionRevision(value => value + 1);
+        startSession(result);
       })();
       await kakaoCompletion.current;
     } finally { pending.current = false; }
@@ -53,21 +65,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pending.current = true;
       try {
         const result = await getKakaoWebFlow().finish();
-        setSession(result);
-        setSessionRevision(value => value + 1);
+        startSession(result);
       } finally { clearKakaoWebFlow(); pending.current = false; }
     })();
     return kakaoCompletion.current;
-  }, []);
+  }, [startSession]);
 
   const signIn = async (email: string, password: string) => {
     if (pending.current) throw new Error('인증 요청을 처리하고 있어요. 잠시 후 다시 시도해 주세요.');
     pending.current = true;
     try {
       const result = await login(email, password);
-      setSession(result);
-      // 같은 계정으로 다시 들어와도 이전 사용 중 생긴 임시 학습 기록을 이어 붙이지 않습니다.
-      setSessionRevision((value) => value + 1);
+      startSession(result);
     } finally { pending.current = false; }
   };
 
@@ -90,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally { pending.current = false; }
   };
 
-  return <AuthContext.Provider value={{ session, returningName, sessionRevision, signIn, startKakaoSignIn, finishKakaoSignIn, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ session, returningName, sessionRevision, signIn, completeSignup, startKakaoSignIn, finishKakaoSignIn, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

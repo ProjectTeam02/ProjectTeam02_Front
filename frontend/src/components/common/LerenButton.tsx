@@ -2,7 +2,7 @@
  * 공통 실행 버튼. 기본/보조 스타일과 비활성·로딩 표시를 제공하고, 실제 작업은 onPress로 전달받습니다.
  */
 import React from 'react';
-import type { PressableProps, StyleProp, ViewStyle } from 'react-native';
+import type { PressableProps, StyleProp, TextStyle, ViewStyle } from 'react-native';
 import {
   Pressable,
   Text,
@@ -23,6 +23,8 @@ export interface LerenButtonProps {
   variant?: 'primary' | 'secondary';
   disabled?: boolean;
   loading?: boolean;
+  loadingLabel?: string;
+  textStyle?: StyleProp<TextStyle>;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -32,6 +34,8 @@ export default function LerenButton({
   variant = 'primary',
   disabled = false,
   loading = false,
+  loadingLabel,
+  textStyle,
   style,
 }: LerenButtonProps) {
   // 요청 중에도 클릭을 막아 화면에서 중복 실행을 줄입니다. 서버 중복 방지는 별도 필요합니다.
@@ -41,6 +45,7 @@ export default function LerenButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={loading ? loadingLabel ?? title : undefined}
       accessibilityState={{
         disabled: isDisabled,
         busy: loading,
@@ -51,26 +56,16 @@ export default function LerenButton({
         styles.button,
         secondary && styles.secondary,
         isDisabled && styles.disabled,
+        loading && !!loadingLabel && styles.loadingRow,
         style,
       ]}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={
-            secondary && !disabled
-              ? COLORS.primary
-              : COLORS.muted
-          }
-        />
-      ) : (
-        <Text
-          style={[
-            styles.text,
-            secondary && styles.secondaryText,
-            isDisabled && styles.disabledText,
-          ]}
-        >
-          {title}
+      {loading && (
+        <ActivityIndicator color={secondary && !disabled ? COLORS.primary : COLORS.muted} />
+      )}
+      {(!loading || loadingLabel) && (
+        <Text style={[styles.text, secondary && styles.secondaryText, isDisabled && styles.disabledText, textStyle]}>
+          {loading ? loadingLabel : title}
         </Text>
       )}
     </Pressable>
@@ -89,7 +84,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  loadingRow: { flexDirection: 'row', gap: 8 },
   text: {
+    flexShrink: 1,
     ...TYPOGRAPHY.label,
     color: COLORS.surface,
     textAlign: 'center',

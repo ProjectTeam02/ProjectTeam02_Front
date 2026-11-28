@@ -12,6 +12,9 @@ interface LoginResponse {
   message?: string;
 }
 
+/** 인증 거부와 연결 실패를 화면에서 서로 다른 문구로 안내합니다. */
+export class InvalidCredentialsError extends Error {}
+
 export async function login(
   email: string,
   password: string,
@@ -33,6 +36,7 @@ export async function login(
       redirect: 'error',
     });
 
+    if (response.status === 401) throw new InvalidCredentialsError('이메일과 비밀번호를 다시 확인해 주세요.');
     const body: LoginResponse = await response.json();
 
     // 실패 응답은 화면에서 안내할 수 있도록 예외로 전달합니다.

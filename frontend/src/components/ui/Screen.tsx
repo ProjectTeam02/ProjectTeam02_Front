@@ -21,6 +21,8 @@ const TABS = [
 const bodySpacing: Record<string, ViewStyle> = {
   '/': { paddingTop: 8, paddingBottom: 16, gap: 22 },
   '/home': { paddingTop: 6 },
+  '/login': { paddingTop: 6, gap: 0 },
+  '/signup': { paddingTop: 6, gap: 0 },
   '/steps': { paddingTop: 8 },
   '/lesson': { paddingTop: 8 },
   '/calendar': { paddingTop: 8 },
